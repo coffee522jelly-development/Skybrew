@@ -24,7 +24,7 @@
   }
 </script>
 
-<div class="flex flex-col items-center justify-center min-h-[50vh]">
+<div class="flex flex-col items-center justify-center min-h-screen">
   <div class="w-full max-w-md p-8 bg-surface rounded-xl shadow-lg border">
     <h2 class="text-2xl font-bold mb-6 text-center text-primary">Login to Bluesky</h2>
 
