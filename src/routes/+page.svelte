@@ -4,10 +4,15 @@
   import LoginForm from '$lib/components/LoginForm.svelte';
   import Column from '$lib/components/Column.svelte';
   import SettingsDialog from '$lib/components/SettingsDialog.svelte';
-  import { Settings, LogOut, Home, Bell, Search, User } from 'lucide-svelte';
+  import { Settings, LogOut, Home, Bell, Search, User, X } from 'lucide-svelte';
+  import { toast } from 'svelte-sonner';
 
   let isStoreLoaded = $state(false);
   let isSettingsOpen = $state(false);
+
+  // Manage active columns
+  type ColumnDef = { id: string, type: 'home' | 'notifications' | 'profile' | 'search', title: string };
+  let columns = $state<ColumnDef[]>([{ id: 'col-1', type: 'home', title: 'Home' }]);
 
   onMount(async () => {
     await initStore();
@@ -15,8 +20,27 @@
   });
 
   function handleLogout() {
-    // In a real app, we'd also clear the store
     appState.session = null;
+  }
+
+  function addColumn(type: ColumnDef['type'], title: string) {
+    if (type === 'search') {
+      toast.info('Search functionality is coming soon!');
+      return;
+    }
+
+    // Scroll to the end after adding
+    columns = [...columns, { id: `col-${Date.now()}`, type, title }];
+    setTimeout(() => {
+      const container = document.getElementById('columns-container');
+      if (container) {
+        container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+      }
+    }, 100);
+  }
+
+  function removeColumn(id: string) {
+    columns = columns.filter(col => col.id !== id);
   }
 </script>
 
@@ -36,19 +60,31 @@
       </div>
 
       <div class="flex-1 flex flex-col gap-2 p-2 mt-4">
-        <button class="flex items-center gap-4 p-3 rounded-full hover:bg-surface text-primary font-semibold transition-colors">
+        <button
+          onclick={() => addColumn('home', 'Home')}
+          class="flex items-center gap-4 p-3 rounded-full hover:bg-surface text-foreground font-semibold transition-colors"
+        >
           <Home size={24} />
           <span class="hidden md:block">Home</span>
         </button>
-        <button class="flex items-center gap-4 p-3 rounded-full hover:bg-surface transition-colors">
+        <button
+          onclick={() => addColumn('search', 'Search')}
+          class="flex items-center gap-4 p-3 rounded-full hover:bg-surface transition-colors"
+        >
           <Search size={24} />
-          <span class="hidden md:block">Explore</span>
+          <span class="hidden md:block">Search</span>
         </button>
-        <button class="flex items-center gap-4 p-3 rounded-full hover:bg-surface transition-colors">
+        <button
+          onclick={() => addColumn('notifications', 'Notifications')}
+          class="flex items-center gap-4 p-3 rounded-full hover:bg-surface transition-colors"
+        >
           <Bell size={24} />
           <span class="hidden md:block">Notifications</span>
         </button>
-        <button class="flex items-center gap-4 p-3 rounded-full hover:bg-surface transition-colors">
+        <button
+          onclick={() => addColumn('profile', 'Profile')}
+          class="flex items-center gap-4 p-3 rounded-full hover:bg-surface transition-colors"
+        >
           <User size={24} />
           <span class="hidden md:block">Profile</span>
         </button>
@@ -73,11 +109,20 @@
     </nav>
 
     <!-- Main Content Area (Columns) -->
-    <main class="flex-1 flex overflow-x-auto bg-surface relative">
-      <!-- Columns Container -->
+    <main id="columns-container" class="flex-1 flex overflow-x-auto bg-surface relative">
       <div class="flex h-full">
-        <Column title="Home" />
-        <!-- Can add more columns here like Notifications, specific feeds, etc. -->
+        {#each columns as col (col.id)}
+          <div class="relative group">
+            <Column type={col.type} title={col.title} />
+            <button
+              onclick={() => removeColumn(col.id)}
+              class="absolute top-4 right-12 p-2 bg-background/80 hover:bg-destructive text-secondary hover:text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-sm z-20"
+              aria-label="Remove column"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        {/each}
       </div>
     </main>
 

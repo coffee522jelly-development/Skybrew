@@ -5,17 +5,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: 'var(--background)',
-        surface: 'var(--surface)',
-        foreground: 'var(--foreground)',
-        border: 'var(--border)',
-        accent: 'var(--accent)',
-        success: 'var(--success)',
-        warning: 'var(--warning)',
-        destructive: 'var(--destructive)',
-        primary: 'var(--primary)',
-        secondary: 'var(--secondary)',
-        tertiary: 'var(--tertiary)',
+        background: 'rgb(var(--background) / <alpha-value>)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        foreground: 'rgb(var(--foreground) / <alpha-value>)',
+        border: 'rgb(var(--border) / <alpha-value>)',
+        accent: 'rgb(var(--accent) / <alpha-value>)',
+        success: 'rgb(var(--success) / <alpha-value>)',
+        warning: 'rgb(var(--warning) / <alpha-value>)',
+        destructive: 'rgb(var(--destructive) / <alpha-value>)',
+        primary: 'rgb(var(--primary) / <alpha-value>)',
+        secondary: 'rgb(var(--secondary) / <alpha-value>)',
+        tertiary: 'rgb(var(--tertiary) / <alpha-value>)',
       }
     },
   },

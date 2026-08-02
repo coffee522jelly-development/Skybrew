@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { agent } from '$lib/api';
+  import { appState } from '$lib/store.svelte';
   import Post from './Post.svelte';
-  import { RefreshCw } from 'lucide-svelte';
+  import { RefreshCw, Bell } from 'lucide-svelte';
 
-  const { title = 'Home' } = $props<{ title?: string }>();
+  const { title = 'Home', type = 'home' } = $props<{ title?: string, type?: 'home' | 'notifications' | 'profile' }>();
 
   let feed = $state<any[]>([]);
   let loading = $state(true);
@@ -14,10 +15,29 @@
   async function loadFeed() {
     try {
       error = '';
-      const response = await agent.getTimeline({ limit: 30 });
-      feed = response.data.feed;
+      let response;
+      if (type === 'home') {
+        response = await agent.getTimeline({ limit: 30 });
+        feed = response.data.feed;
+      } else if (type === 'profile') {
+        // Need actor parameter for profile, use current session handle
+        const actor = appState.session?.handle;
+        if (actor) {
+           response = await agent.getAuthorFeed({ actor, limit: 30 });
+           feed = response.data.feed;
+        } else {
+           error = 'No session found';
+        }
+      } else if (type === 'notifications') {
+        response = await agent.listNotifications({ limit: 30 });
+        // Notifications API returns 'notifications' instead of 'feed'
+        // For simplicity, we just store it in feed, though the format is different.
+        // We'll need a different renderer or adapter for notifications in a real app.
+        // For this MVP we will just show a placeholder if it's not a post.
+        feed = response.data.notifications;
+      }
     } catch (err: any) {
-      error = 'Failed to load timeline';
+      error = `Failed to load ${title}`;
       console.error(err);
     } finally {
       loading = false;
@@ -33,15 +53,11 @@
   onMount(() => {
     loadFeed();
 
-    // Simple polling for real-time feel (every 30s)
+    // Simple polling
     const interval = setInterval(() => {
       if (!isRefreshing) {
-        // Silent refresh in background, could be optimized to only fetch new
-        agent.getTimeline({ limit: 30 }).then(response => {
-             // Basic naive merge to avoid flicker if nothing changed,
-             // in a real app we'd prepend new items
-             feed = response.data.feed;
-        }).catch(() => {});
+        // Silent refresh in background
+        loadFeed().catch(() => {});
       }
     }, 30000);
 
@@ -76,12 +92,25 @@
       </div>
     {:else if feed.length === 0}
       <div class="p-8 text-center text-secondary">
-        No posts found.
+        No items found.
       </div>
     {:else}
       <div class="flex flex-col">
-        {#each feed as item (item.post.uri)}
-          <Post post={item.post} />
+        {#each feed as item}
+          {#if type === 'notifications'}
+            <!-- Minimal notification renderer -->
+             <div class="p-4 border-b border-border hover:bg-surface/50 flex gap-3 text-sm">
+                <Bell size={20} class="text-primary shrink-0" />
+                <div>
+                  <span class="font-semibold">{item.author?.displayName || item.author?.handle}</span>
+                  <span>{item.reason}</span>
+                  <div class="text-secondary text-xs mt-1">Notification format may vary.</div>
+                </div>
+             </div>
+          {:else if item.post}
+             <!-- Home and Profile feeds use the standard post renderer -->
+             <Post post={item.post} />
+          {/if}
         {/each}
       </div>
     {/if}
