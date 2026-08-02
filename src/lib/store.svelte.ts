@@ -6,7 +6,7 @@ export type Theme = 'light' | 'dark' | 'system';
 export const appState = $state({
   theme: 'system' as Theme,
   fontFamily: 'Inter, Avenir, Helvetica, Arial, sans-serif',
-  fontSize: 16,
+  fontSize: 14,
   primaryColor: '#2563eb', // Default blue
   session: null as any | null,
 });

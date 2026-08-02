@@ -46,64 +46,64 @@
 
 {#if !isStoreLoaded}
   <div class="flex h-screen items-center justify-center bg-background text-primary">
-    <p class="text-xl font-bold animate-pulse">Loading Client...</p>
+    <p class="text-sm font-bold animate-pulse">Loading Client...</p>
   </div>
 {:else if !appState.session}
   <LoginForm />
 {:else}
-  <div class="flex h-screen overflow-hidden bg-surface">
+  <div class="flex h-screen overflow-hidden bg-surface text-sm">
     <!-- Sidebar / Nav -->
-    <nav class="w-16 md:w-64 border-r border-border flex flex-col bg-background shrink-0 transition-all duration-300">
-      <div class="p-4 flex items-center justify-center md:justify-start">
-        <div class="w-8 h-8 rounded bg-primary text-white flex items-center justify-center font-bold text-xl">B</div>
-        <span class="hidden md:block ml-3 font-bold text-xl">Skybrew</span>
+    <nav class="w-14 md:w-48 border-r border-border flex flex-col bg-background shrink-0 transition-all duration-300">
+      <div class="p-3 flex items-center justify-center md:justify-start">
+        <div class="w-6 h-6 rounded bg-primary text-white flex items-center justify-center font-bold text-xs">B</div>
+        <span class="hidden md:block ml-2 font-bold text-sm tracking-wide">Skybrew</span>
       </div>
 
-      <div class="flex-1 flex flex-col gap-2 p-2 mt-4">
+      <div class="flex-1 flex flex-col gap-1 p-2 mt-2">
         <button
           onclick={() => addColumn('home', 'Home')}
-          class="flex items-center gap-4 p-3 rounded-full hover:bg-surface text-foreground font-semibold transition-colors"
+          class="flex items-center gap-3 p-2 rounded hover:bg-surface text-foreground font-semibold transition-colors"
         >
-          <Home size={24} />
-          <span class="hidden md:block">Home</span>
+          <Home size={16} />
+          <span class="hidden md:block text-xs">Home</span>
         </button>
         <button
           onclick={() => addColumn('search', 'Search')}
-          class="flex items-center gap-4 p-3 rounded-full hover:bg-surface transition-colors"
+          class="flex items-center gap-3 p-2 rounded hover:bg-surface transition-colors"
         >
-          <Search size={24} />
-          <span class="hidden md:block">Search</span>
+          <Search size={16} />
+          <span class="hidden md:block text-xs">Search</span>
         </button>
         <button
           onclick={() => addColumn('notifications', 'Notifications')}
-          class="flex items-center gap-4 p-3 rounded-full hover:bg-surface transition-colors"
+          class="flex items-center gap-3 p-2 rounded hover:bg-surface transition-colors"
         >
-          <Bell size={24} />
-          <span class="hidden md:block">Notifications</span>
+          <Bell size={16} />
+          <span class="hidden md:block text-xs">Notifications</span>
         </button>
         <button
           onclick={() => addColumn('profile', 'Profile')}
-          class="flex items-center gap-4 p-3 rounded-full hover:bg-surface transition-colors"
+          class="flex items-center gap-3 p-2 rounded hover:bg-surface transition-colors"
         >
-          <User size={24} />
-          <span class="hidden md:block">Profile</span>
+          <User size={16} />
+          <span class="hidden md:block text-xs">Profile</span>
         </button>
       </div>
 
-      <div class="p-4 border-t border-border flex flex-col gap-2">
+      <div class="p-2 border-t border-border flex flex-col gap-1">
         <button
           onclick={() => isSettingsOpen = true}
-          class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface transition-colors w-full"
+          class="flex items-center gap-2 p-2 rounded hover:bg-surface transition-colors w-full text-secondary"
         >
-          <Settings size={20} class="text-secondary" />
-          <span class="hidden md:block text-sm font-medium">Settings</span>
+          <Settings size={14} />
+          <span class="hidden md:block text-xs font-medium">Settings</span>
         </button>
         <button
           onclick={handleLogout}
-          class="flex items-center gap-3 p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors w-full"
+          class="flex items-center gap-2 p-2 rounded hover:bg-destructive/10 text-destructive transition-colors w-full"
         >
-          <LogOut size={20} />
-          <span class="hidden md:block text-sm font-medium">Logout</span>
+          <LogOut size={14} />
+          <span class="hidden md:block text-xs font-medium">Logout</span>
         </button>
       </div>
     </nav>
@@ -116,10 +116,10 @@
             <Column type={col.type} title={col.title} />
             <button
               onclick={() => removeColumn(col.id)}
-              class="absolute top-4 right-12 p-2 bg-background/80 hover:bg-destructive text-secondary hover:text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-sm z-20"
+              class="absolute top-2 right-8 p-1 bg-background/80 hover:bg-destructive text-secondary hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all shadow-sm z-20"
               aria-label="Remove column"
             >
-              <X size={16} />
+              <X size={12} />
             </button>
           </div>
         {/each}

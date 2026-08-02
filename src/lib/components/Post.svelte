@@ -67,32 +67,32 @@
   }
 </script>
 
-<div class="p-4 border-b border-border hover:bg-surface/50 transition-colors">
-  <div class="flex gap-3">
+<div class="p-3 border-b border-border hover:bg-surface/50 transition-colors text-xs">
+  <div class="flex gap-2.5">
     <!-- Avatar -->
     <img
       src={author.avatar || 'https://via.placeholder.com/48'}
       alt={author.handle}
-      class="w-12 h-12 rounded-full object-cover shrink-0"
+      class="w-8 h-8 rounded-full object-cover shrink-0"
     />
 
     <!-- Content -->
     <div class="flex-1 min-w-0">
-      <div class="flex items-baseline gap-2 mb-1">
+      <div class="flex items-baseline gap-1.5 mb-0.5">
         <span class="font-bold truncate text-foreground">{author.displayName || author.handle}</span>
-        <span class="text-secondary text-sm truncate">@{author.handle}</span>
-        <span class="text-secondary text-sm ml-auto shrink-0">{timeAgo}</span>
+        <span class="text-secondary opacity-80 truncate">@{author.handle}</span>
+        <span class="text-secondary opacity-60 ml-auto shrink-0 text-[10px]">{timeAgo}</span>
       </div>
 
-      <div class="text-foreground leading-relaxed break-words whitespace-pre-wrap mb-3">
+      <div class="text-foreground leading-snug break-words whitespace-pre-wrap mb-2">
         {record.text}
       </div>
 
       <!-- Images (if any) -->
       {#if embed && embed.$type === 'app.bsky.embed.images#view' && embed.images}
-        <div class="grid grid-cols-2 gap-2 mb-3">
+        <div class="grid grid-cols-2 gap-1 mb-2">
           {#each embed.images as image}
-            <div class="aspect-square rounded-lg overflow-hidden border border-border">
+            <div class="aspect-square rounded overflow-hidden border border-border">
               <img
                 src={image.thumb}
                 alt={image.alt || 'Post image'}
@@ -105,37 +105,37 @@
       {/if}
 
       <!-- Actions -->
-      <div class="flex gap-6 text-secondary">
+      <div class="flex gap-4 text-secondary mt-1">
         <button
           onclick={handleReply}
-          class="flex items-center gap-1.5 hover:text-primary transition-colors group"
+          class="flex items-center gap-1 hover:text-primary transition-colors group"
         >
-          <div class="p-1.5 rounded-full group-hover:bg-primary/10">
-            <MessageCircle size={18} />
+          <div class="p-1 rounded group-hover:bg-primary/10">
+            <MessageCircle size={14} />
           </div>
-          <span class="text-sm">{post.replyCount || 0}</span>
+          <span class="text-[10px]">{post.replyCount || 0}</span>
         </button>
 
         <button
           onclick={toggleRepost}
           disabled={isRepostLoading}
-          class="flex items-center gap-1.5 hover:text-success transition-colors group {isReposted ? 'text-success' : ''}"
+          class="flex items-center gap-1 hover:text-success transition-colors group {isReposted ? 'text-success' : ''}"
         >
-          <div class="p-1.5 rounded-full group-hover:bg-success/10">
-            <Repeat2 size={18} class={isRepostLoading ? 'animate-pulse' : ''} />
+          <div class="p-1 rounded group-hover:bg-success/10">
+            <Repeat2 size={14} class={isRepostLoading ? 'animate-pulse' : ''} />
           </div>
-          <span class="text-sm">{post.repostCount || 0}</span>
+          <span class="text-[10px]">{post.repostCount || 0}</span>
         </button>
 
         <button
           onclick={toggleLike}
           disabled={isLikeLoading}
-          class="flex items-center gap-1.5 hover:text-destructive transition-colors group {isLiked ? 'text-destructive' : ''}"
+          class="flex items-center gap-1 hover:text-destructive transition-colors group {isLiked ? 'text-destructive' : ''}"
         >
-          <div class="p-1.5 rounded-full group-hover:bg-destructive/10">
-            <Heart size={18} class="{isLiked ? 'fill-current' : ''} {isLikeLoading ? 'animate-pulse' : ''}" />
+          <div class="p-1 rounded group-hover:bg-destructive/10">
+            <Heart size={14} class="{isLiked ? 'fill-current' : ''} {isLikeLoading ? 'animate-pulse' : ''}" />
           </div>
-          <span class="text-sm">{post.likeCount || 0}</span>
+          <span class="text-[10px]">{post.likeCount || 0}</span>
         </button>
       </div>
     </div>
