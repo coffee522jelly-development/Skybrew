@@ -5,6 +5,7 @@
   import Column from '$lib/components/Column.svelte';
   import SettingsDialog from '$lib/components/SettingsDialog.svelte';
   import { Settings, LogOut, Home, Bell, Search, User, X, Plus } from 'lucide-svelte';
+  import { toast } from 'svelte-sonner';
 
   let isStoreLoaded = $state(false);
   let isSettingsOpen = $state(false);
@@ -16,13 +17,14 @@
   // Start with all standard columns visible by default
   let columns = $state<ColumnDef[]>([
     { id: 'col-home', type: 'home', title: 'Home' },
-    { id: 'col-search-default', type: 'search', title: 'Search' },
+    { id: 'col-search-default', type: 'search', title: 'Search', query: '' },
     { id: 'col-notifications', type: 'notifications', title: 'Notifications' },
     { id: 'col-profile', type: 'profile', title: 'Profile' }
   ]);
 
   // Derived state to easily check if a standard column type (non-search) is active
   let activeTypes = $derived(new Set(columns.filter(c => c.type !== 'search').map(c => c.type)));
+  let searchColumns = $derived(columns.filter(c => c.type === 'search'));
 
   onMount(async () => {
     await initStore();
@@ -45,7 +47,7 @@
   }
 
   function addSearchColumn() {
-    columns = [...columns, { id: `col-search-${Date.now()}`, type: 'search', title: 'Search' }];
+    columns = [...columns, { id: `col-search-${Date.now()}`, type: 'search', title: 'Search', query: '' }];
     scrollToEnd();
   }
 
@@ -58,9 +60,15 @@
     }, 100);
   }
 
-  // Allow closing via the X button on the column itself
   function removeColumn(id: string) {
     columns = columns.filter(col => col.id !== id);
+  }
+
+  function scrollToColumn(id: string) {
+    const colElement = document.getElementById(id);
+    if (colElement) {
+       colElement.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+    }
   }
 </script>
 
@@ -79,7 +87,7 @@
         <span class="hidden md:block ml-2 font-bold text-sm tracking-wide">Skybrew</span>
       </div>
 
-      <div class="flex-1 flex flex-col gap-1 p-2 mt-2">
+      <div class="flex-1 flex flex-col gap-1 p-2 mt-2 overflow-y-auto">
         <button
           onclick={() => toggleColumn('home', 'Home')}
           class="flex items-center gap-3 p-2 rounded transition-colors {activeTypes.has('home') ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-surface text-secondary'}"
@@ -88,7 +96,7 @@
           <span class="hidden md:block text-xs">Home</span>
         </button>
 
-        <!-- Search behaves differently: it always adds a new search column -->
+        <!-- Search base button -->
         <button
           onclick={addSearchColumn}
           class="flex items-center gap-3 p-2 rounded hover:bg-surface text-secondary transition-colors group"
@@ -97,6 +105,28 @@
           <span class="hidden md:block text-xs flex-1 text-left">Search</span>
           <Plus size={12} class="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
+
+        <!-- Nested active Search columns -->
+        {#if searchColumns.length > 0}
+          <div class="hidden md:flex flex-col gap-0.5 ml-7 mb-1 border-l border-border pl-2">
+            {#each searchColumns as sCol}
+              <div class="flex items-center group/scol rounded hover:bg-surface">
+                 <button
+                   class="flex-1 text-left px-2 py-1 text-[11px] text-secondary truncate"
+                   onclick={() => scrollToColumn(sCol.id)}
+                 >
+                   {sCol.query ? sCol.query : '(New Search)'}
+                 </button>
+                 <button
+                   onclick={() => removeColumn(sCol.id)}
+                   class="p-1 text-secondary hover:text-destructive opacity-0 group-hover/scol:opacity-100 transition-opacity"
+                 >
+                   <X size={10} />
+                 </button>
+              </div>
+            {/each}
+          </div>
+        {/if}
 
         <button
           onclick={() => toggleColumn('notifications', 'Notifications')}
@@ -136,15 +166,14 @@
     <main id="columns-container" class="flex-1 flex overflow-x-auto bg-surface relative">
       <div class="flex h-full">
         {#each columns as col (col.id)}
-          <div class="relative group">
-            <Column type={col.type} title={col.title} initialQuery={col.query} />
-            <button
-              onclick={() => removeColumn(col.id)}
-              class="absolute top-2 right-8 p-1 bg-background/80 hover:bg-destructive text-secondary hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all shadow-sm z-20"
-              aria-label="Remove column"
-            >
-              <X size={12} />
-            </button>
+          <div id={col.id} class="h-full shrink-0">
+            <!-- Bind query so sidebar updates automatically when user types in column -->
+            <Column
+              type={col.type}
+              title={col.title}
+              bind:searchQuery={col.query}
+              onClose={() => removeColumn(col.id)}
+            />
           </div>
         {/each}
       </div>
