@@ -4,26 +4,25 @@
   import LoginForm from '$lib/components/LoginForm.svelte';
   import Column from '$lib/components/Column.svelte';
   import SettingsDialog from '$lib/components/SettingsDialog.svelte';
-  import { Settings, LogOut, Home, Bell, Search, User, X } from 'lucide-svelte';
-  import { toast } from 'svelte-sonner';
+  import { Settings, LogOut, Home, Bell, Search, User, X, Plus } from 'lucide-svelte';
 
   let isStoreLoaded = $state(false);
   let isSettingsOpen = $state(false);
 
   // Manage active columns state
   type ColumnType = 'home' | 'search' | 'notifications' | 'profile';
-  type ColumnDef = { id: string, type: ColumnType, title: string };
+  type ColumnDef = { id: string, type: ColumnType, title: string, query?: string };
 
-  // Start with all columns visible by default
+  // Start with all standard columns visible by default
   let columns = $state<ColumnDef[]>([
     { id: 'col-home', type: 'home', title: 'Home' },
-    { id: 'col-search', type: 'search', title: 'Search' },
+    { id: 'col-search-default', type: 'search', title: 'Search' },
     { id: 'col-notifications', type: 'notifications', title: 'Notifications' },
     { id: 'col-profile', type: 'profile', title: 'Profile' }
   ]);
 
-  // Derived state to easily check if a column type is active
-  let activeTypes = $derived(new Set(columns.map(c => c.type)));
+  // Derived state to easily check if a standard column type (non-search) is active
+  let activeTypes = $derived(new Set(columns.filter(c => c.type !== 'search').map(c => c.type)));
 
   onMount(async () => {
     await initStore();
@@ -34,20 +33,29 @@
     appState.session = null;
   }
 
-  function toggleColumn(type: ColumnType, title: string) {
+  function toggleColumn(type: 'home' | 'notifications' | 'profile', title: string) {
     if (activeTypes.has(type)) {
       // Remove it
       columns = columns.filter(col => col.type !== type);
     } else {
       // Add it and scroll to the end
       columns = [...columns, { id: `col-${type}-${Date.now()}`, type, title }];
-      setTimeout(() => {
-        const container = document.getElementById('columns-container');
-        if (container) {
-          container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
-        }
-      }, 100);
+      scrollToEnd();
     }
+  }
+
+  function addSearchColumn() {
+    columns = [...columns, { id: `col-search-${Date.now()}`, type: 'search', title: 'Search' }];
+    scrollToEnd();
+  }
+
+  function scrollToEnd() {
+    setTimeout(() => {
+      const container = document.getElementById('columns-container');
+      if (container) {
+        container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+      }
+    }, 100);
   }
 
   // Allow closing via the X button on the column itself
@@ -79,13 +87,17 @@
           <Home size={16} />
           <span class="hidden md:block text-xs">Home</span>
         </button>
+
+        <!-- Search behaves differently: it always adds a new search column -->
         <button
-          onclick={() => toggleColumn('search', 'Search')}
-          class="flex items-center gap-3 p-2 rounded transition-colors {activeTypes.has('search') ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-surface text-secondary'}"
+          onclick={addSearchColumn}
+          class="flex items-center gap-3 p-2 rounded hover:bg-surface text-secondary transition-colors group"
         >
           <Search size={16} />
-          <span class="hidden md:block text-xs">Search</span>
+          <span class="hidden md:block text-xs flex-1 text-left">Search</span>
+          <Plus size={12} class="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
+
         <button
           onclick={() => toggleColumn('notifications', 'Notifications')}
           class="flex items-center gap-3 p-2 rounded transition-colors {activeTypes.has('notifications') ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-surface text-secondary'}"
@@ -125,7 +137,7 @@
       <div class="flex h-full">
         {#each columns as col (col.id)}
           <div class="relative group">
-            <Column type={col.type} title={col.title} />
+            <Column type={col.type} title={col.title} initialQuery={col.query} />
             <button
               onclick={() => removeColumn(col.id)}
               class="absolute top-2 right-8 p-1 bg-background/80 hover:bg-destructive text-secondary hover:text-white rounded opacity-0 group-hover:opacity-100 transition-all shadow-sm z-20"

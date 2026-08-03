@@ -5,18 +5,29 @@
   import Post from './Post.svelte';
   import { RefreshCw, Bell, Search as SearchIcon } from 'lucide-svelte';
 
-  const { title = 'Home', type = 'home' } = $props<{ title?: string, type?: 'home' | 'notifications' | 'profile' | 'search' }>();
+  let { title = 'Home', type = 'home', initialQuery = '' } = $props<{ title?: string, type?: 'home' | 'notifications' | 'profile' | 'search', initialQuery?: string }>();
 
   let feed = $state<any[]>([]);
-  let loading = $state(true);
   let error = $state('');
   let isRefreshing = $state(false);
 
+  // Use $state and $effect correctly to avoid passing props into $state directly as initial value if it can change
+  let loading = $state(true);
+  let searchQuery = $state('');
+  let displayTitle = $state('');
+
+  $effect(() => {
+     searchQuery = initialQuery;
+     displayTitle = title;
+     loading = type !== 'search';
+  });
+
   async function loadFeed() {
-    if (type === 'search') {
+    if (type === 'search' && !searchQuery.trim()) {
       loading = false;
       isRefreshing = false;
-      return; // Skip API call for search placeholder
+      feed = [];
+      return;
     }
 
     try {
@@ -26,7 +37,6 @@
         response = await agent.getTimeline({ limit: 30 });
         feed = response.data.feed;
       } else if (type === 'profile') {
-        // Need actor parameter for profile, use current session handle
         const actor = appState.session?.handle;
         if (actor) {
            response = await agent.getAuthorFeed({ actor, limit: 30 });
@@ -36,11 +46,16 @@
         }
       } else if (type === 'notifications') {
         response = await agent.listNotifications({ limit: 30 });
-        // Notifications API returns 'notifications' instead of 'feed'
         feed = response.data.notifications;
+      } else if (type === 'search') {
+        // App.bsky.feed.searchPosts
+        response = await agent.app.bsky.feed.searchPosts({ q: searchQuery, limit: 30 });
+        // The search API returns 'posts', we need to map them to look like feed items for our Post component
+        feed = response.data.posts.map(post => ({ post }));
+        displayTitle = `Search: ${searchQuery}`;
       }
     } catch (err: any) {
-      error = `Failed to load ${title}`;
+      error = `Failed to load ${displayTitle}`;
       console.error(err);
     } finally {
       loading = false;
@@ -53,8 +68,21 @@
     await loadFeed();
   }
 
+  function handleSearchSubmit(e: Event) {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      loading = true;
+      loadFeed();
+    }
+  }
+
   onMount(() => {
-    loadFeed();
+    // Need a tiny timeout to allow $effect to run and set initial state before we load
+    setTimeout(() => {
+       if (type !== 'search' || searchQuery.trim()) {
+         loadFeed();
+       }
+    }, 0);
 
     // Simple polling
     const interval = setInterval(() => {
@@ -70,34 +98,49 @@
 
 <div class="flex flex-col w-[320px] border-r border-border shrink-0 h-screen bg-background">
   <!-- Header -->
-  <div class="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b border-border p-2.5 flex justify-between items-center">
-    <h2 class="font-semibold text-sm tracking-tight">{title}</h2>
-    <button
-      onclick={refresh}
-      disabled={loading || isRefreshing || type === 'search'}
-      class="p-1.5 hover:bg-surface rounded transition-colors disabled:opacity-50"
-    >
-      <RefreshCw size={14} class={isRefreshing ? 'animate-spin text-primary' : ''} />
-    </button>
+  <div class="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b border-border p-2.5 flex flex-col gap-2">
+    <div class="flex justify-between items-center">
+      <h2 class="font-semibold text-sm tracking-tight truncate pr-4">{displayTitle}</h2>
+      <button
+        onclick={refresh}
+        disabled={loading || isRefreshing || (type === 'search' && !searchQuery.trim())}
+        class="p-1.5 hover:bg-surface rounded transition-colors disabled:opacity-50 shrink-0"
+      >
+        <RefreshCw size={14} class={isRefreshing ? 'animate-spin text-primary' : ''} />
+      </button>
+    </div>
+
+    <!-- Search Input for Search Column -->
+    {#if type === 'search'}
+      <form onsubmit={handleSearchSubmit} class="flex w-full relative">
+        <input
+          type="text"
+          bind:value={searchQuery}
+          placeholder="Search posts..."
+          class="w-full pl-8 pr-2 py-1 text-xs border rounded bg-surface focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <SearchIcon size={12} class="absolute left-2.5 top-2 text-secondary" />
+      </form>
+    {/if}
   </div>
 
   <!-- Content -->
   <div class="flex-1 overflow-y-auto scrollbar-thin">
-    {#if type === 'search'}
+    {#if type === 'search' && !searchQuery.trim() && feed.length === 0}
       <div class="p-8 flex flex-col items-center justify-center text-secondary h-full text-center space-y-3 opacity-70">
         <SearchIcon size={32} class="text-primary mb-2" />
-        <p class="font-semibold text-sm text-foreground">Coming Soon</p>
-        <p class="text-xs">Search functionality is currently under development.</p>
+        <p class="font-semibold text-sm text-foreground">Search</p>
+        <p class="text-xs">Enter a keyword to search posts.</p>
       </div>
     {:else if loading}
       <div class="p-6 text-center text-secondary text-xs">
         <RefreshCw size={16} class="animate-spin mx-auto mb-2 text-primary" />
-        <p>Loading {title}...</p>
+        <p>Loading...</p>
       </div>
     {:else if error}
-      <div class="p-3 m-3 bg-destructive/10 text-destructive rounded text-center text-xs">
+      <div class="p-3 m-3 bg-destructive/10 text-destructive rounded text-center text-xs break-words">
         {error}
-        <button onclick={refresh} class="mt-1 underline hover:no-underline">Try again</button>
+        <button onclick={refresh} class="mt-1 underline hover:no-underline block mx-auto">Try again</button>
       </div>
     {:else if feed.length === 0}
       <div class="p-6 text-center text-secondary text-xs">
@@ -110,14 +153,14 @@
             <!-- Minimal notification renderer -->
              <div class="p-3 border-b border-border hover:bg-surface/50 flex gap-2 text-xs">
                 <Bell size={14} class="text-primary shrink-0 mt-0.5" />
-                <div>
-                  <span class="font-semibold">{item.author?.displayName || item.author?.handle}</span>
-                  <span class="ml-1 opacity-80">{item.reason}</span>
+                <div class="min-w-0">
+                  <span class="font-semibold truncate block">{item.author?.displayName || item.author?.handle}</span>
+                  <span class="opacity-80 block truncate">{item.reason}</span>
                   <div class="text-secondary text-[10px] mt-1 leading-tight">Notification format may vary.</div>
                 </div>
              </div>
           {:else if item.post}
-             <!-- Home and Profile feeds use the standard post renderer -->
+             <!-- Home, Profile, and Search feeds use the standard post renderer -->
              <Post post={item.post} />
           {/if}
         {/each}
