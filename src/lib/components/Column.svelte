@@ -3,9 +3,9 @@
   import { agent } from '$lib/api';
   import { appState } from '$lib/store.svelte';
   import Post from './Post.svelte';
-  import { RefreshCw, Bell } from 'lucide-svelte';
+  import { RefreshCw, Bell, Search as SearchIcon } from 'lucide-svelte';
 
-  const { title = 'Home', type = 'home' } = $props<{ title?: string, type?: 'home' | 'notifications' | 'profile' }>();
+  const { title = 'Home', type = 'home' } = $props<{ title?: string, type?: 'home' | 'notifications' | 'profile' | 'search' }>();
 
   let feed = $state<any[]>([]);
   let loading = $state(true);
@@ -13,6 +13,12 @@
   let isRefreshing = $state(false);
 
   async function loadFeed() {
+    if (type === 'search') {
+      loading = false;
+      isRefreshing = false;
+      return; // Skip API call for search placeholder
+    }
+
     try {
       error = '';
       let response;
@@ -52,7 +58,7 @@
 
     // Simple polling
     const interval = setInterval(() => {
-      if (!isRefreshing) {
+      if (!isRefreshing && type !== 'search') {
         // Silent refresh in background
         loadFeed().catch(() => {});
       }
@@ -68,7 +74,7 @@
     <h2 class="font-semibold text-sm tracking-tight">{title}</h2>
     <button
       onclick={refresh}
-      disabled={loading || isRefreshing}
+      disabled={loading || isRefreshing || type === 'search'}
       class="p-1.5 hover:bg-surface rounded transition-colors disabled:opacity-50"
     >
       <RefreshCw size={14} class={isRefreshing ? 'animate-spin text-primary' : ''} />
@@ -77,7 +83,13 @@
 
   <!-- Content -->
   <div class="flex-1 overflow-y-auto scrollbar-thin">
-    {#if loading}
+    {#if type === 'search'}
+      <div class="p-8 flex flex-col items-center justify-center text-secondary h-full text-center space-y-3 opacity-70">
+        <SearchIcon size={32} class="text-primary mb-2" />
+        <p class="font-semibold text-sm text-foreground">Coming Soon</p>
+        <p class="text-xs">Search functionality is currently under development.</p>
+      </div>
+    {:else if loading}
       <div class="p-6 text-center text-secondary text-xs">
         <RefreshCw size={16} class="animate-spin mx-auto mb-2 text-primary" />
         <p>Loading {title}...</p>

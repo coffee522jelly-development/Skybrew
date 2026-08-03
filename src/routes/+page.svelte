@@ -10,9 +10,20 @@
   let isStoreLoaded = $state(false);
   let isSettingsOpen = $state(false);
 
-  // Manage active columns
-  type ColumnDef = { id: string, type: 'home' | 'notifications' | 'profile' | 'search', title: string };
-  let columns = $state<ColumnDef[]>([{ id: 'col-1', type: 'home', title: 'Home' }]);
+  // Manage active columns state
+  type ColumnType = 'home' | 'search' | 'notifications' | 'profile';
+  type ColumnDef = { id: string, type: ColumnType, title: string };
+
+  // Start with all columns visible by default
+  let columns = $state<ColumnDef[]>([
+    { id: 'col-home', type: 'home', title: 'Home' },
+    { id: 'col-search', type: 'search', title: 'Search' },
+    { id: 'col-notifications', type: 'notifications', title: 'Notifications' },
+    { id: 'col-profile', type: 'profile', title: 'Profile' }
+  ]);
+
+  // Derived state to easily check if a column type is active
+  let activeTypes = $derived(new Set(columns.map(c => c.type)));
 
   onMount(async () => {
     await initStore();
@@ -23,22 +34,23 @@
     appState.session = null;
   }
 
-  function addColumn(type: ColumnDef['type'], title: string) {
-    if (type === 'search') {
-      toast.info('Search functionality is coming soon!');
-      return;
+  function toggleColumn(type: ColumnType, title: string) {
+    if (activeTypes.has(type)) {
+      // Remove it
+      columns = columns.filter(col => col.type !== type);
+    } else {
+      // Add it and scroll to the end
+      columns = [...columns, { id: `col-${type}-${Date.now()}`, type, title }];
+      setTimeout(() => {
+        const container = document.getElementById('columns-container');
+        if (container) {
+          container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+        }
+      }, 100);
     }
-
-    // Scroll to the end after adding
-    columns = [...columns, { id: `col-${Date.now()}`, type, title }];
-    setTimeout(() => {
-      const container = document.getElementById('columns-container');
-      if (container) {
-        container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
-      }
-    }, 100);
   }
 
+  // Allow closing via the X button on the column itself
   function removeColumn(id: string) {
     columns = columns.filter(col => col.id !== id);
   }
@@ -61,29 +73,29 @@
 
       <div class="flex-1 flex flex-col gap-1 p-2 mt-2">
         <button
-          onclick={() => addColumn('home', 'Home')}
-          class="flex items-center gap-3 p-2 rounded hover:bg-surface text-foreground font-semibold transition-colors"
+          onclick={() => toggleColumn('home', 'Home')}
+          class="flex items-center gap-3 p-2 rounded transition-colors {activeTypes.has('home') ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-surface text-secondary'}"
         >
           <Home size={16} />
           <span class="hidden md:block text-xs">Home</span>
         </button>
         <button
-          onclick={() => addColumn('search', 'Search')}
-          class="flex items-center gap-3 p-2 rounded hover:bg-surface transition-colors"
+          onclick={() => toggleColumn('search', 'Search')}
+          class="flex items-center gap-3 p-2 rounded transition-colors {activeTypes.has('search') ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-surface text-secondary'}"
         >
           <Search size={16} />
           <span class="hidden md:block text-xs">Search</span>
         </button>
         <button
-          onclick={() => addColumn('notifications', 'Notifications')}
-          class="flex items-center gap-3 p-2 rounded hover:bg-surface transition-colors"
+          onclick={() => toggleColumn('notifications', 'Notifications')}
+          class="flex items-center gap-3 p-2 rounded transition-colors {activeTypes.has('notifications') ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-surface text-secondary'}"
         >
           <Bell size={16} />
           <span class="hidden md:block text-xs">Notifications</span>
         </button>
         <button
-          onclick={() => addColumn('profile', 'Profile')}
-          class="flex items-center gap-3 p-2 rounded hover:bg-surface transition-colors"
+          onclick={() => toggleColumn('profile', 'Profile')}
+          class="flex items-center gap-3 p-2 rounded transition-colors {activeTypes.has('profile') ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-surface text-secondary'}"
         >
           <User size={16} />
           <span class="hidden md:block text-xs">Profile</span>
