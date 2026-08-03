@@ -2,30 +2,39 @@
   <!-- Transparent background -->
   <rect width="1024" height="1024" rx="256" fill="transparent"/>
 
-  <!-- Mug Handle -->
-  <path d="M720 520 h100 a 120 120 0 0 1 0 240 h-100" fill="none" stroke="#1E3A8A" stroke-width="80" stroke-linecap="round"/>
+  <defs>
+    <!-- Modern blue gradient for the mug -->
+    <linearGradient id="mugGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1E3A8A"/>
+    </linearGradient>
 
-  <!-- Mug Body (Night Sky) -->
-  <path d="M250 400 h440 v280 a 220 220 0 0 1 -440 0 z" fill="#0F172A"/>
+    <!-- Gradient for steam (S shape) -->
+    <linearGradient id="steamGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#93C5FD" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#EFF6FF" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Mug Handle -->
+  <path d="M720 520 h100 a 120 120 0 0 1 0 240 h-100" fill="none" stroke="url(#mugGrad)" stroke-width="80" stroke-linecap="round"/>
+
+  <!-- Mug Body -->
+  <path d="M250 400 h440 v280 a 220 220 0 0 1 -440 0 z" fill="url(#mugGrad)"/>
 
   <!-- Mug Top Rim -->
-  <ellipse cx="470" cy="400" rx="220" ry="40" fill="#1E293B"/>
+  <ellipse cx="470" cy="400" rx="220" ry="40" fill="#2563EB"/>
 
   <!-- Coffee inside -->
   <ellipse cx="470" cy="400" rx="190" ry="30" fill="#3E2723"/>
   <ellipse cx="470" cy="400" rx="170" ry="20" fill="#2E1A14"/>
 
-  <!-- Crescent Moon on the Mug -->
-  <path d="M380 550 a 60 60 0 1 0 80 80 a 70 70 0 1 1 -80 -80 z" fill="#FDE047"/>
+  <!-- Paper Airplane Icon (Minimalist / Modern) on the Mug -->
+  <path d="M340 600 L440 500 L580 600 L490 640 Z" fill="#FFFFFF" opacity="0.9"/>
+  <path d="M440 500 L460 630 L490 640 Z" fill="#E2E8F0" opacity="0.9"/>
+  <path d="M440 500 L580 600 L480 560 Z" fill="#F8FAFC" opacity="0.9"/>
 
-  <!-- Stars on the Mug -->
-  <circle cx="340" cy="650" r="8" fill="#FFFBEB"/>
-  <circle cx="520" cy="520" r="10" fill="#FFFBEB"/>
-  <circle cx="580" cy="620" r="6" fill="#FFFBEB"/>
-  <circle cx="320" cy="500" r="5" fill="#FFFBEB"/>
-  <circle cx="450" cy="700" r="7" fill="#FFFBEB"/>
-
-  <!-- Steam -->
-  <path d="M420 320 Q 370 220 420 120" fill="none" stroke="#CBD5E1" stroke-width="25" stroke-linecap="round" opacity="0.6"/>
-  <path d="M520 300 Q 570 200 520 100" fill="none" stroke="#CBD5E1" stroke-width="25" stroke-linecap="round" opacity="0.6"/>
+  <!-- Steam forming an 'S' shape for Skybrew -->
+  <path d="M470 340 c 60 -40, 100 -80, 0 -120 c -100 -40, -60 -80, 0 -120"
+        fill="none" stroke="url(#steamGrad)" stroke-width="35" stroke-linecap="round"/>
 </svg>
