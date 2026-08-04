@@ -7,13 +7,14 @@
 
   let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), onClose } = $props<{
     title?: string,
-    type?: 'home' | 'notifications' | 'profile' | 'search',
+    type?: 'home' | 'notifications' | 'profile' | 'search' | 'users',
     initialQuery?: string,
     searchQuery?: string,
     onClose?: () => void
   }>();
 
   let feed = $state<any[]>([]);
+  let actors = $state<any[]>([]);
   let error = $state('');
   let isRefreshing = $state(false);
 
@@ -57,6 +58,10 @@
         response = await agent.app.bsky.feed.searchPosts({ q: searchQuery, limit: 30 });
         feed = response.data.posts.map(post => ({ post }));
         displayTitle = `Search: ${searchQuery}`;
+      } else if (type === 'users') {
+        response = await agent.searchActors({ q: searchQuery, limit: 30 });
+        actors = response.data.actors;
+        displayTitle = `Users: ${searchQuery}`;
       }
     } catch (err: any) {
       error = `Failed to load ${displayTitle}`;
@@ -124,12 +129,12 @@
     </div>
 
     <!-- Search Input for Search Column -->
-    {#if type === 'search'}
+    {#if type === 'search' || type === 'users'}
       <form onsubmit={handleSearchSubmit} class="flex w-full relative">
         <input
           type="text"
           bind:value={searchQuery}
-          placeholder="Search posts..."
+          placeholder={type === 'search' ? 'Search posts...' : 'Search users...'}
           class="w-full pl-7 pr-2 py-1 text-xs border rounded bg-surface focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <SearchIcon size={12} class="absolute left-2.5 top-2 text-secondary" />
@@ -139,11 +144,11 @@
 
   <!-- Content -->
   <div class="flex-1 overflow-y-auto">
-    {#if type === 'search' && !searchQuery.trim() && feed.length === 0}
+    {#if (type === 'search' || type === 'users') && !searchQuery.trim() && feed.length === 0 && actors.length === 0}
       <div class="p-8 flex flex-col items-center justify-center text-secondary h-full text-center space-y-3 opacity-70">
         <SearchIcon size={32} class="text-primary mb-2" />
-        <p class="font-semibold text-sm text-foreground">Search</p>
-        <p class="text-xs">Enter a keyword to search posts.</p>
+        <p class="font-semibold text-sm text-foreground">{type === 'search' ? 'Search Posts' : 'Find Users'}</p>
+        <p class="text-xs">{type === 'search' ? 'Enter a keyword to search posts.' : 'Enter a name to find users.'}</p>
       </div>
     {:else if loading}
       <div class="p-6 text-center text-secondary text-xs">
@@ -155,12 +160,43 @@
         {error}
         <button onclick={refresh} class="mt-1 underline hover:no-underline block mx-auto">Try again</button>
       </div>
-    {:else if feed.length === 0}
+    {:else if feed.length === 0 && actors.length === 0}
       <div class="p-6 text-center text-secondary text-xs">
         No items found.
       </div>
     {:else}
       <div class="flex flex-col">
+        {#each actors as actor}
+          <div class="p-3 border-b border-border hover:bg-surface/50 transition-colors flex items-start gap-3">
+            <div class="w-10 h-10 rounded-full bg-surface shrink-0 overflow-hidden border border-border">
+              {#if actor.avatar}
+                <img src={actor.avatar} alt="Avatar" class="w-full h-full object-cover" />
+              {/if}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-bold text-xs truncate">{actor.displayName || actor.handle}</p>
+              <p class="text-[11px] text-secondary truncate">@{actor.handle}</p>
+              {#if actor.description}
+                <p class="mt-1 text-[11px] break-words line-clamp-2 leading-snug">{actor.description}</p>
+              {/if}
+            </div>
+            <button
+              aria-label="Follow or Unfollow" class="px-2.5 py-1 rounded text-[10px] font-bold shrink-0 transition-colors {actor.viewer?.following ? 'bg-surface text-secondary hover:bg-destructive/10 hover:text-destructive before:content-[\'Following\'] hover:before:content-[\'Unfollow\']' : 'bg-primary text-white hover:opacity-90 before:content-[\'Follow\']'}"
+              onclick={async () => {
+                if (actor.viewer?.following) {
+                  await agent.deleteFollow(actor.viewer.following);
+                  actor.viewer.following = undefined;
+                } else {
+                  const res = await agent.follow(actor.did);
+                  actor.viewer = actor.viewer || {};
+                  actor.viewer.following = res.uri;
+                }
+                actors = [...actors];
+              }}
+            >
+            </button>
+          </div>
+        {/each}
         {#each feed as item}
           {#if type === 'notifications'}
              <div class="p-3 border-b border-border hover:bg-surface/50 flex gap-2 text-xs">

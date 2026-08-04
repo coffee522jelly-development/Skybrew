@@ -4,14 +4,14 @@
   import LoginForm from '$lib/components/LoginForm.svelte';
   import Column from '$lib/components/Column.svelte';
   import SettingsDialog from '$lib/components/SettingsDialog.svelte';
-  import { Settings, LogOut, Home, Bell, Search, User, X, Plus } from 'lucide-svelte';
+  import { Settings, LogOut, Home, Bell, Search, User, X, Plus, Users } from 'lucide-svelte';
   import { toast } from 'svelte-sonner';
 
   let isStoreLoaded = $state(false);
   let isSettingsOpen = $state(false);
 
   // Manage active columns state
-  type ColumnType = 'home' | 'search' | 'notifications' | 'profile';
+  type ColumnType = 'home' | 'search' | 'users' | 'notifications' | 'profile';
   type ColumnDef = { id: string, type: ColumnType, title: string, query?: string };
 
   // Start with all standard columns visible by default
@@ -25,14 +25,24 @@
   // Derived state to easily check if a standard column type (non-search) is active
   let activeTypes = $derived(new Set(columns.filter(c => c.type !== 'search').map(c => c.type)));
   let searchColumns = $derived(columns.filter(c => c.type === 'search'));
+  let usersColumns = $derived(columns.filter(c => c.type === 'users'));
 
   onMount(async () => {
     await initStore();
     isStoreLoaded = true;
   });
 
-  function handleLogout() {
+  async function handleLogout() {
     appState.session = null;
+    try {
+      if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+        const { load } = await import('@tauri-apps/plugin-store');
+        const store = await load('settings.json', { autoSave: true });
+        await store.set('session', null);
+      }
+    } catch(e) {
+      console.error(e);
+    }
   }
 
   function toggleColumn(type: 'home' | 'notifications' | 'profile', title: string) {
@@ -48,6 +58,11 @@
 
   function addSearchColumn() {
     columns = [...columns, { id: `col-search-${Date.now()}`, type: 'search', title: 'Search', query: '' }];
+    scrollToEnd();
+  }
+
+  function addUsersColumn() {
+    columns = [...columns, { id: `col-users-${Date.now()}`, type: 'users', title: 'Find Users', query: '' }];
     scrollToEnd();
   }
 
@@ -120,6 +135,38 @@
                  <button
                    onclick={() => removeColumn(sCol.id)}
                    class="p-1 text-secondary hover:text-destructive opacity-0 group-hover/scol:opacity-100 transition-opacity"
+                 >
+                   <X size={10} />
+                 </button>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        <!-- Users base button -->
+        <button
+          onclick={addUsersColumn}
+          class="flex items-center gap-3 p-2 rounded hover:bg-surface text-secondary transition-colors group"
+        >
+          <Users size={16} />
+          <span class="hidden md:block text-xs flex-1 text-left">Users</span>
+          <Plus size={12} class="hidden md:block opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
+
+        <!-- Nested active Users columns -->
+        {#if usersColumns.length > 0}
+          <div class="hidden md:flex flex-col gap-0.5 ml-7 mb-1 border-l border-border pl-2">
+            {#each usersColumns as uCol}
+              <div class="flex items-center group/ucol rounded hover:bg-surface">
+                 <button
+                   class="flex-1 text-left px-2 py-1 text-[11px] text-secondary truncate"
+                   onclick={() => scrollToColumn(uCol.id)}
+                 >
+                   {uCol.query ? uCol.query : '(Find Users)'}
+                 </button>
+                 <button
+                   onclick={() => removeColumn(uCol.id)}
+                   class="p-1 text-secondary hover:text-destructive opacity-0 group-hover/ucol:opacity-100 transition-opacity"
                  >
                    <X size={10} />
                  </button>

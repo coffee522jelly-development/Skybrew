@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 // but we can test that the login form handles UI interactions.
 test('Login form displays loading state on submit', async ({ page }) => {
   await page.goto('/');
-  await page.waitForSelector('text=Login to Bluesky', { timeout: 10000 });
+  await page.waitForSelector('text=Skybrew', { timeout: 10000 });
 
   await page.getByLabel('Handle or Email').fill('test@test.com');
   await page.getByLabel('App Password').fill('password');
