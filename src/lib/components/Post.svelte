@@ -2,6 +2,7 @@
   import { formatDistanceToNow } from 'date-fns';
   import { Heart, MessageCircle, Repeat2 } from 'lucide-svelte';
   import { agent } from '$lib/api';
+  import { RichText } from '@atproto/api';
   import { toast } from 'svelte-sonner';
 
   let { post = $bindable() } = $props<{ post: any }>();
@@ -17,6 +18,10 @@
   let isReposted = $derived(!!post.viewer?.repost);
   let isLikeLoading = $state(false);
   let isRepostLoading = $state(false);
+
+  let isReplying = $state(false);
+  let replyText = $state('');
+  let isReplyLoading = $state(false);
 
   async function toggleLike() {
     if (isLikeLoading) return;
@@ -63,7 +68,42 @@
   }
 
   function handleReply() {
-    toast.info('Reply feature is under construction');
+    isReplying = !isReplying;
+  }
+
+  async function submitReply() {
+    if (!replyText.trim() || isReplyLoading) return;
+
+    isReplyLoading = true;
+    try {
+      // Determine root and parent for the reply.
+      // If this post is already a reply, its record.reply will have a root.
+      const root = record.reply?.root || { uri: post.uri, cid: post.cid };
+      const parent = { uri: post.uri, cid: post.cid };
+
+      const rt = new RichText({ text: replyText.trim() });
+      await rt.detectFacets(agent);
+
+      await agent.post({
+        text: rt.text,
+        facets: rt.facets,
+        createdAt: new Date().toISOString(),
+        reply: {
+          root: root,
+          parent: parent
+        }
+      });
+
+      toast.success('Reply sent');
+      isReplying = false;
+      replyText = '';
+      post.replyCount = (post.replyCount || 0) + 1;
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to send reply');
+      console.error(e);
+    } finally {
+      isReplyLoading = false;
+    }
   }
 </script>
 
@@ -138,6 +178,35 @@
           <span class="text-[10px]">{post.likeCount || 0}</span>
         </button>
       </div>
+
+      <!-- Reply Inline Form -->
+      {#if isReplying}
+        <div class="mt-3 flex flex-col gap-2">
+          <textarea
+            bind:value={replyText}
+            placeholder="Write your reply..."
+            class="w-full bg-surface border border-border rounded p-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            rows="3"
+            disabled={isReplyLoading}
+          ></textarea>
+          <div class="flex justify-end gap-2">
+            <button
+              onclick={() => { isReplying = false; replyText = ''; }}
+              disabled={isReplyLoading}
+              class="px-3 py-1 rounded border border-border hover:bg-surface transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onclick={submitReply}
+              disabled={!replyText.trim() || isReplyLoading}
+              class="px-3 py-1 rounded bg-primary text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {isReplyLoading ? 'Sending...' : 'Reply'}
+            </button>
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 </div>
