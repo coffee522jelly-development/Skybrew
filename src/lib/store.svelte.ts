@@ -17,7 +17,20 @@ export async function initStore() {
   if (typeof window !== 'undefined') {
     // Only run in client
     try {
-      store = await load('settings.json', { autoSave: true });
+      if ((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI_IPC__) {
+        store = await load('settings.json', { autoSave: true });
+      } else {
+        console.warn("Tauri environment not detected, using localStorage mock.");
+        store = {
+          get: async (k: string) => {
+            const v = localStorage.getItem('skybrew_' + k);
+            return v ? JSON.parse(v) : null;
+          },
+          set: async (k: string, v: any) => {
+            localStorage.setItem('skybrew_' + k, JSON.stringify(v));
+          }
+        };
+      }
       const savedTheme = await store.get('theme');
       const savedFontFamily = await store.get('fontFamily');
       const savedFontSize = await store.get('fontSize');

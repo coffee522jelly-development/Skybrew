@@ -1,6 +1,6 @@
 <script lang="ts">
   import { agent } from '$lib/api';
-  import { updateSetting } from '$lib/store.svelte';
+  import { updateSetting, appState } from '$lib/store.svelte';
 
   let identifier = $state('');
   let password = $state('');
@@ -15,6 +15,7 @@
     try {
       const { data } = await agent.login({ identifier, password });
       await updateSetting('session', data);
+      appState.session = data;
     } catch (err: any) {
       error = err.message || 'Login failed';
       console.error(err);

@@ -35,7 +35,7 @@
   async function handleLogout() {
     appState.session = null;
     try {
-      if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+      if (typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI_IPC__)) {
         const { load } = await import('@tauri-apps/plugin-store');
         const store = await load('settings.json', { autoSave: true });
         await store.set('session', null);
