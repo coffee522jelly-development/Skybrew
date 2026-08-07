@@ -14,8 +14,8 @@
 
     try {
       const { data } = await agent.login({ identifier, password });
-      await updateSetting('session', data);
       appState.session = data;
+      await updateSetting('session', data);
     } catch (err: any) {
       error = err.message || 'Login failed';
       console.error(err);
