@@ -23,20 +23,37 @@
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
-  let textChunks = $derived.by(() => {
-    const text = record.text || '';
-    if (!highlightWord.trim()) return [{ text, match: false }];
+  let richText = $derived.by(() => {
+    const rt = new RichText({ text: record.text || '', facets: record.facets || [] });
+    return rt;
+  });
 
-    const words = highlightWord.trim().split(/\s+/).filter(Boolean);
-    if (words.length === 0) return [{ text, match: false }];
+  let textSegments = $derived.by(() => {
+    const segments = [];
+    for (const segment of richText.segments()) {
+      let isHighlight = false;
+      if (highlightWord.trim()) {
+        const words = highlightWord.trim().split(/\s+/).filter(Boolean);
+        isHighlight = words.some((w: string) => segment.text.toLowerCase().includes(w.toLowerCase()));
+      }
 
-    const pattern = new RegExp(`(${words.map(escapeRegExp).join('|')})`, 'gi');
-    const parts = text.split(pattern);
+      let link = undefined;
+      let mention = undefined;
+      let tag = undefined;
 
-    return parts.map((part: string) => {
-       const match = words.some((w: string) => part.toLowerCase() === w.toLowerCase());
-       return { text: part, match };
-    }).filter((p: any) => p.text);
+      if (segment.isLink()) link = segment.link?.uri;
+      if (segment.isMention()) mention = segment.mention?.did;
+      if (segment.isTag()) tag = segment.tag?.tag;
+
+      segments.push({
+        text: segment.text,
+        isHighlight,
+        link,
+        mention,
+        tag
+      });
+    }
+    return segments;
   });
 
   let isReplying = $state(false);
@@ -155,11 +172,19 @@
       </div>
 
       <div class="text-foreground leading-snug break-words whitespace-pre-wrap mb-2">
-        {#each textChunks as chunk}
-          {#if chunk.match}
-            <mark class="bg-highlight/50 text-foreground px-0.5 rounded-sm font-semibold shadow-[0_0_2px_rgb(var(--highlight))]">{chunk.text}</mark>
+        {#each textSegments as seg}
+          {#if seg.link}
+            <a href={seg.link} target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">{#if seg.isHighlight}<mark class="bg-highlight/50 text-foreground px-0.5 rounded-sm font-semibold shadow-[0_0_2px_rgb(var(--highlight))]">{seg.text}</mark>{:else}{seg.text}{/if}</a>
+          {:else if seg.mention}
+            <button class="text-primary hover:underline" onclick={() => onOpenProfile?.(seg.text.replace('@', ''))}>{#if seg.isHighlight}<mark class="bg-highlight/50 text-foreground px-0.5 rounded-sm font-semibold shadow-[0_0_2px_rgb(var(--highlight))]">{seg.text}</mark>{:else}{seg.text}{/if}</button>
+          {:else if seg.tag}
+            <span class="text-primary">{#if seg.isHighlight}<mark class="bg-highlight/50 text-foreground px-0.5 rounded-sm font-semibold shadow-[0_0_2px_rgb(var(--highlight))]">{seg.text}</mark>{:else}{seg.text}{/if}</span>
           {:else}
-            {chunk.text}
+            {#if seg.isHighlight}
+              <mark class="bg-highlight/50 text-foreground px-0.5 rounded-sm font-semibold shadow-[0_0_2px_rgb(var(--highlight))]">{seg.text}</mark>
+            {:else}
+              {seg.text}
+            {/if}
           {/if}
         {/each}
       </div>

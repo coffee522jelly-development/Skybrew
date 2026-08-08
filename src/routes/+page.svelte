@@ -29,7 +29,13 @@
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.dropEffect = 'move';
+      // WebKit requires setData to be called during dragstart for the drag operation to continue
+      e.dataTransfer.setData('text/plain', id);
     }
+  }
+
+  function handleDragEnter(e: DragEvent) {
+    e.preventDefault();
   }
 
   function handleDragOver(e: DragEvent) {
@@ -41,9 +47,10 @@
 
   function handleDrop(e: DragEvent, targetId: string) {
     e.preventDefault();
-    if (!draggedColId || draggedColId === targetId) return;
+    const droppedId = e.dataTransfer?.getData('text/plain') || draggedColId;
+    if (!droppedId || droppedId === targetId) return;
 
-    const fromIndex = columns.findIndex(c => c.id === draggedColId);
+    const fromIndex = columns.findIndex(c => c.id === droppedId);
     const toIndex = columns.findIndex(c => c.id === targetId);
 
     if (fromIndex !== -1 && toIndex !== -1) {
@@ -257,9 +264,11 @@
     <main id="columns-container" class="flex-1 flex overflow-x-auto bg-surface relative">
       <div class="flex h-full">
         {#each columns as col (col.id)}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             id={col.id}
             class="h-full shrink-0 transition-transform {draggedColId === col.id ? 'opacity-50' : ''}"
+            ondragenter={handleDragEnter}
             ondragover={handleDragOver}
             ondrop={(e) => handleDrop(e, col.id)}
           >
