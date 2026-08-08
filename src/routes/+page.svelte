@@ -66,6 +66,17 @@
     scrollToEnd();
   }
 
+  function openProfile(handle: string) {
+    // Check if a profile column for this handle already exists
+    const existing = columns.find(c => c.type === 'profile' && c.query === handle);
+    if (existing) {
+      scrollToColumn(existing.id);
+    } else {
+      columns = [...columns, { id: `col-profile-${Date.now()}`, type: 'profile', title: handle, query: handle }];
+      scrollToEnd();
+    }
+  }
+
   function scrollToEnd() {
     setTimeout(() => {
       const container = document.getElementById('columns-container');
@@ -220,6 +231,7 @@
               title={col.title}
               bind:searchQuery={col.query}
               onClose={() => removeColumn(col.id)}
+              onOpenProfile={openProfile}
             />
           </div>
         {/each}

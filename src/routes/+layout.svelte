@@ -42,6 +42,8 @@
       const root = document.documentElement;
       root.style.setProperty('--font-family-base', appState.fontFamily);
       root.style.setProperty('--font-size-base', `${appState.fontSize}px`);
+      // Update the root font-size so that tailwind's rem-based text classes scale accordingly
+      root.style.fontSize = `${appState.fontSize}px`;
       // Important: save as RGB values for tailwind
       if (appState.primaryColor.startsWith('#')) {
         root.style.setProperty('--primary', hexToRgb(appState.primaryColor));

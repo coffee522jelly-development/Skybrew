@@ -5,7 +5,7 @@
   import { RichText } from '@atproto/api';
   import { toast } from 'svelte-sonner';
 
-  let { post = $bindable() } = $props<{ post: any }>();
+  let { post = $bindable(), onOpenProfile } = $props<{ post: any, onOpenProfile?: (handle: string) => void }>();
 
   let author = $derived(post.author);
   let record = $derived(post.record);
@@ -110,16 +110,26 @@
 <div class="p-3 border-b border-border hover:bg-surface/50 transition-colors text-xs">
   <div class="flex gap-2.5">
     <!-- Avatar -->
-    <img
-      src={author.avatar || 'https://via.placeholder.com/48'}
-      alt={author.handle}
-      class="w-8 h-8 rounded-full object-cover shrink-0"
-    />
+    <button
+      class="w-8 h-8 rounded-full bg-surface shrink-0 overflow-hidden border border-border hover:opacity-80 transition-opacity block cursor-pointer"
+      onclick={() => onOpenProfile?.(author.handle)}
+    >
+      <img
+        src={author.avatar || 'https://via.placeholder.com/48'}
+        alt={author.handle}
+        class="w-full h-full object-cover"
+      />
+    </button>
 
     <!-- Content -->
     <div class="flex-1 min-w-0">
       <div class="flex items-baseline gap-1.5 mb-0.5">
-        <span class="font-bold truncate text-foreground">{author.displayName || author.handle}</span>
+        <button
+           class="font-bold truncate text-foreground hover:underline text-left"
+           onclick={() => onOpenProfile?.(author.handle)}
+        >
+           {author.displayName || author.handle}
+        </button>
         <span class="text-secondary opacity-80 truncate">@{author.handle}</span>
         <span class="text-secondary opacity-60 ml-auto shrink-0 text-[10px]">{timeAgo}</span>
       </div>

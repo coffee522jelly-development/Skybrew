@@ -5,12 +5,13 @@
   import Post from './Post.svelte';
   import { RefreshCw, Bell, Search as SearchIcon, X } from 'lucide-svelte';
 
-  let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), onClose } = $props<{
+  let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), onClose, onOpenProfile } = $props<{
     title?: string,
     type?: 'home' | 'notifications' | 'profile' | 'search' | 'users',
     initialQuery?: string,
     searchQuery?: string,
-    onClose?: () => void
+    onClose?: () => void,
+    onOpenProfile?: (handle: string) => void
   }>();
 
   let feed = $state<any[]>([]);
@@ -20,6 +21,7 @@
 
   let loading = $state(true);
   let displayTitle = $state('');
+  let profileData = $state<any>(null);
 
   $effect(() => {
      if (type === 'search' && !searchQuery && initialQuery) {
@@ -44,10 +46,15 @@
         response = await agent.getTimeline({ limit: 30 });
         feed = response.data.feed;
       } else if (type === 'profile') {
-        const actor = appState.session?.handle;
+        const actor = searchQuery || appState.session?.handle;
         if (actor) {
-           response = await agent.getAuthorFeed({ actor, limit: 30 });
-           feed = response.data.feed;
+           const [feedRes, profileRes] = await Promise.all([
+             agent.getAuthorFeed({ actor, limit: 30 }),
+             agent.getProfile({ actor })
+           ]);
+           feed = feedRes.data.feed;
+           profileData = profileRes.data;
+           displayTitle = profileData.displayName || profileData.handle;
         } else {
            error = 'No session found';
         }
@@ -144,6 +151,53 @@
 
   <!-- Content -->
   <div class="flex-1 overflow-y-auto">
+    {#if type === 'profile' && profileData}
+      <div class="p-4 border-b border-border bg-surface/30">
+        <div class="flex items-start gap-4 mb-3">
+          <div class="w-16 h-16 rounded-full overflow-hidden shrink-0 border border-border bg-surface">
+            {#if profileData.avatar}
+              <img src={profileData.avatar} alt="Avatar" class="w-full h-full object-cover" />
+            {/if}
+          </div>
+          <div class="flex-1 min-w-0">
+            <h1 class="font-bold text-base truncate">{profileData.displayName || profileData.handle}</h1>
+            <p class="text-secondary text-xs truncate">@{profileData.handle}</p>
+            <div class="flex gap-3 mt-1 text-xs text-secondary">
+              <span><strong class="text-foreground">{profileData.followersCount}</strong> Followers</span>
+              <span><strong class="text-foreground">{profileData.followsCount}</strong> Following</span>
+            </div>
+          </div>
+        </div>
+        {#if profileData.description}
+          <p class="text-xs mb-3 whitespace-pre-wrap">{profileData.description}</p>
+        {/if}
+        {#if profileData.handle !== appState.session?.handle}
+          <button
+            class="w-full py-1.5 rounded text-xs font-bold transition-colors {profileData.viewer?.following ? 'bg-surface border border-border text-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 hover:after:content-[\'Unfollow\']' : 'bg-primary text-white hover:opacity-90'}"
+            onclick={async () => {
+              try {
+                if (profileData.viewer?.following) {
+                  await agent.deleteFollow(profileData.viewer.following);
+                  profileData.viewer.following = undefined;
+                } else {
+                  const res = await agent.follow(profileData.did);
+                  profileData.viewer = profileData.viewer || {};
+                  profileData.viewer.following = res.uri;
+                }
+              } catch(e) {
+                console.error(e);
+              }
+            }}
+          >
+            {#if profileData.viewer?.following}
+               Following
+            {:else}
+               Follow
+            {/if}
+          </button>
+        {/if}
+      </div>
+    {/if}
     {#if (type === 'search' || type === 'users') && !searchQuery.trim() && feed.length === 0 && actors.length === 0}
       <div class="p-8 flex flex-col items-center justify-center text-secondary h-full text-center space-y-3 opacity-70">
         <SearchIcon size={32} class="text-primary mb-2" />
@@ -168,13 +222,16 @@
       <div class="flex flex-col">
         {#each actors as actor}
           <div class="p-3 border-b border-border hover:bg-surface/50 transition-colors flex items-start gap-3">
-            <div class="w-10 h-10 rounded-full bg-surface shrink-0 overflow-hidden border border-border">
+            <button
+              class="w-10 h-10 rounded-full bg-surface shrink-0 overflow-hidden border border-border hover:opacity-80 transition-opacity cursor-pointer block"
+              onclick={() => onOpenProfile?.(actor.handle)}
+            >
               {#if actor.avatar}
                 <img src={actor.avatar} alt="Avatar" class="w-full h-full object-cover" />
               {/if}
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="font-bold text-xs truncate">{actor.displayName || actor.handle}</p>
+            </button>
+            <div class="flex-1 min-w-0 cursor-pointer" onclick={() => onOpenProfile?.(actor.handle)} role="button" tabindex="0" onkeydown={e => e.key === 'Enter' && onOpenProfile?.(actor.handle)}>
+              <p class="font-bold text-xs truncate hover:underline">{actor.displayName || actor.handle}</p>
               <p class="text-[11px] text-secondary truncate">@{actor.handle}</p>
               {#if actor.description}
                 <p class="mt-1 text-[11px] break-words line-clamp-2 leading-snug">{actor.description}</p>
@@ -208,7 +265,7 @@
                 </div>
              </div>
           {:else if item.post}
-             <Post post={item.post} />
+             <Post post={item.post} {onOpenProfile} />
           {/if}
         {/each}
       </div>
