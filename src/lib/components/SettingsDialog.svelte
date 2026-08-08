@@ -54,10 +54,24 @@
               value={appState.fontFamily}
               onchange={(e) => updateSetting('fontFamily', e.currentTarget.value)}
             >
-              <option value="Inter, Avenir, Helvetica, Arial, sans-serif">System UI</option>
+              <option value="Inter, Avenir, Helvetica, Arial, sans-serif">System UI (ゴシック)</option>
+              <option value="Georgia, serif">System UI (明朝)</option>
               <option value="'Noto Sans JP', sans-serif">Noto Sans JP</option>
+              <option value="'Noto Serif JP', serif">Noto Serif JP</option>
               <option value="'Zen Kaku Gothic New', sans-serif">Zen Kaku Gothic New</option>
-              <option value="Georgia, serif">Serif</option>
+              <option value="'Zen Maru Gothic', sans-serif">Zen Maru Gothic (丸ゴシック)</option>
+              <option value="'BIZ UDGothic', sans-serif">BIZ UDGothic (ユニバーサルデザイン)</option>
+              <option value="'BIZ UDMincho', serif">BIZ UDMincho (ユニバーサルデザイン)</option>
+              <option value="'M PLUS Rounded 1c', sans-serif">M PLUS Rounded 1c (丸ゴシック)</option>
+              <option value="'Sawarabi Gothic', sans-serif">Sawarabi Gothic</option>
+              <option value="'Sawarabi Mincho', serif">Sawarabi Mincho</option>
+              <option value="'Shippori Mincho', serif">Shippori Mincho</option>
+              <option value="'Klee One', cursive">Klee One (手書き風)</option>
+              <option value="'Yusei Magic', cursive">Yusei Magic (手書き風)</option>
+              <option value="'Hachi Maru Pop', cursive">Hachi Maru Pop (ポップ体)</option>
+              <option value="'Mochiy Pop One', sans-serif">Mochiy Pop One (ポップ体)</option>
+              <option value="'DotGothic16', monospace">DotGothic16 (ドット絵風)</option>
+              <option value="'Rampart One', cursive">Rampart One (ブロック体)</option>
             </select>
           </div>
 

@@ -173,7 +173,7 @@
         {/if}
         {#if profileData.handle !== appState.session?.handle}
           <button
-            class="w-full py-1.5 rounded text-xs font-bold transition-colors {profileData.viewer?.following ? 'bg-surface border border-border text-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 hover:after:content-[\'Unfollow\']' : 'bg-primary text-white hover:opacity-90'}"
+            class="w-full py-1.5 rounded text-xs font-bold transition-colors {profileData.viewer?.following ? 'bg-surface border border-border text-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 hover:text-transparent hover:after:text-destructive hover:after:content-[\'Unfollow\'] relative flex items-center justify-center hover:after:absolute hover:after:inset-0 hover:after:flex hover:after:items-center hover:after:justify-center' : 'bg-primary text-white hover:opacity-90'}"
             onclick={async () => {
               try {
                 if (profileData.viewer?.following) {
