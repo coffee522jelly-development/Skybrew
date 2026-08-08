@@ -16,10 +16,10 @@
 
   // Start with all standard columns visible by default
   let columns = $state<ColumnDef[]>([
-    { id: 'col-home', type: 'home', title: 'Home' },
+    { id: 'col-home', type: 'home', title: 'Home', query: '' },
     { id: 'col-search-default', type: 'search', title: 'Search', query: '' },
-    { id: 'col-notifications', type: 'notifications', title: 'Notifications' },
-    { id: 'col-profile', type: 'profile', title: 'Profile' }
+    { id: 'col-notifications', type: 'notifications', title: 'Notifications', query: '' },
+    { id: 'col-profile', type: 'profile', title: 'Profile', query: '' }
   ]);
 
   // Derived state to easily check if a standard column type (non-search) is active
@@ -51,7 +51,7 @@
       columns = columns.filter(col => col.type !== type);
     } else {
       // Add it and scroll to the end
-      columns = [...columns, { id: `col-${type}-${Date.now()}`, type, title }];
+      columns = [...columns, { id: `col-${type}-${Date.now()}`, type, title, query: '' }];
       scrollToEnd();
     }
   }
