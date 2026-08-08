@@ -22,6 +22,39 @@
     { id: 'col-profile', type: 'profile', title: 'Profile', query: '' }
   ]);
 
+  let draggedColId = $state<string | null>(null);
+
+  function handleDragStart(e: DragEvent, id: string) {
+    draggedColId = id;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  function handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  function handleDrop(e: DragEvent, targetId: string) {
+    e.preventDefault();
+    if (!draggedColId || draggedColId === targetId) return;
+
+    const fromIndex = columns.findIndex(c => c.id === draggedColId);
+    const toIndex = columns.findIndex(c => c.id === targetId);
+
+    if (fromIndex !== -1 && toIndex !== -1) {
+      const newColumns = [...columns];
+      const [movedCol] = newColumns.splice(fromIndex, 1);
+      newColumns.splice(toIndex, 0, movedCol);
+      columns = newColumns;
+    }
+    draggedColId = null;
+  }
+
   // Derived state to easily check if a standard column type (non-search) is active
   let activeTypes = $derived(new Set(columns.filter(c => c.type !== 'search').map(c => c.type)));
   let searchColumns = $derived(columns.filter(c => c.type === 'search'));
@@ -224,7 +257,12 @@
     <main id="columns-container" class="flex-1 flex overflow-x-auto bg-surface relative">
       <div class="flex h-full">
         {#each columns as col (col.id)}
-          <div id={col.id} class="h-full shrink-0">
+          <div
+            id={col.id}
+            class="h-full shrink-0 transition-transform {draggedColId === col.id ? 'opacity-50' : ''}"
+            ondragover={handleDragOver}
+            ondrop={(e) => handleDrop(e, col.id)}
+          >
             <!-- Bind query so sidebar updates automatically when user types in column -->
             <Column
               type={col.type}
@@ -232,6 +270,7 @@
               bind:searchQuery={col.query}
               onClose={() => removeColumn(col.id)}
               onOpenProfile={openProfile}
+              onDragStart={(e) => handleDragStart(e, col.id)}
             />
           </div>
         {/each}
