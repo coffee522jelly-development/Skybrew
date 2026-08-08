@@ -19,6 +19,7 @@
     --primary: 37 99 235;
     --secondary: 100 116 139;
     --tertiary: 203 213 225;
+    --highlight: 249 115 22;
 
     --font-family-base: Inter, Avenir, Helvetica, Arial, sans-serif;
     --font-size-base: 14px;
@@ -37,6 +38,7 @@
     --primary: 59 130 246;
     --secondary: 148 163 184;
     --tertiary: 51 65 85;
+    --highlight: 249 115 22;
   }
 }
 

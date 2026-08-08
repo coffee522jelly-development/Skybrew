@@ -51,6 +51,12 @@
         // Fallback or handle pre-converted values
         root.style.setProperty('--primary', appState.primaryColor);
       }
+
+      if (appState.highlightColor.startsWith('#')) {
+        root.style.setProperty('--highlight', hexToRgb(appState.highlightColor));
+      } else {
+        root.style.setProperty('--highlight', appState.highlightColor);
+      }
     }
   });
 </script>

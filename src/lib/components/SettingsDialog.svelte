@@ -107,6 +107,21 @@
         </div>
       </section>
 
+      <!-- Highlight Color -->
+      <section>
+        <h3 class="text-xs font-semibold mb-2 uppercase tracking-wider text-secondary">Highlight Marker Color</h3>
+        <div class="flex gap-2">
+          {#each ['#f97316', '#eab308', '#84cc16', '#22d3ee', '#f43f5e', '#a855f7'] as color}
+            <button
+              class="w-6 h-6 rounded-sm border transition-transform hover:scale-110 shadow-sm {appState.highlightColor === color ? 'border-foreground scale-110 ring-1 ring-foreground/20' : 'border-transparent'}"
+              style="background-color: {color};"
+              onclick={() => updateSetting('highlightColor', color)}
+              aria-label="Set highlight color to {color}"
+            ></button>
+          {/each}
+        </div>
+      </section>
+
     </div>
   </div>
 {/if}

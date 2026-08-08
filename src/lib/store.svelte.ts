@@ -8,6 +8,7 @@ export const appState = $state({
   fontFamily: 'Inter, Avenir, Helvetica, Arial, sans-serif',
   fontSize: 14,
   primaryColor: '#2563eb', // Default blue
+  highlightColor: '#f97316', // Default orange
   session: null as any | null,
 });
 
@@ -35,12 +36,14 @@ export async function initStore() {
       const savedFontFamily = await store.get('fontFamily');
       const savedFontSize = await store.get('fontSize');
       const savedPrimaryColor = await store.get('primaryColor');
+      const savedHighlightColor = await store.get('highlightColor');
       const savedSession = await store.get('session');
 
       if (savedTheme) appState.theme = savedTheme as Theme;
       if (savedFontFamily) appState.fontFamily = savedFontFamily as string;
       if (savedFontSize) appState.fontSize = savedFontSize as number;
       if (savedPrimaryColor) appState.primaryColor = savedPrimaryColor as string;
+      if (savedHighlightColor) appState.highlightColor = savedHighlightColor as string;
       if (savedSession) {
         try {
            await agent.resumeSession(savedSession as any);

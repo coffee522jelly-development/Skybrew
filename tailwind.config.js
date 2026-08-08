@@ -19,6 +19,7 @@ export default {
         primary: 'rgb(var(--primary) / <alpha-value>)',
         secondary: 'rgb(var(--secondary) / <alpha-value>)',
         tertiary: 'rgb(var(--tertiary) / <alpha-value>)',
+        highlight: 'rgb(var(--highlight) / <alpha-value>)',
       }
     },
   },

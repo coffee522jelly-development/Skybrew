@@ -265,7 +265,7 @@
                 </div>
              </div>
           {:else if item.post}
-             <Post post={item.post} {onOpenProfile} />
+             <Post post={item.post} {onOpenProfile} highlightWord={type === 'search' ? searchQuery : ''} />
           {/if}
         {/each}
       </div>
