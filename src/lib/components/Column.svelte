@@ -5,14 +5,13 @@
   import Post from './Post.svelte';
   import { RefreshCw, Bell, Search as SearchIcon, X } from 'lucide-svelte';
 
-  let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), onClose, onOpenProfile, onDragStart } = $props<{
+  let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), onClose, onOpenProfile } = $props<{
     title?: string,
     type?: 'home' | 'notifications' | 'profile' | 'search' | 'users',
     initialQuery?: string,
     searchQuery?: string,
     onClose?: () => void,
-    onOpenProfile?: (handle: string) => void,
-    onDragStart?: (e: DragEvent) => void
+    onOpenProfile?: (handle: string) => void
   }>();
 
   let feed = $state<any[]>([]);
@@ -112,11 +111,7 @@
 
 <div class="flex flex-col w-[320px] border-r border-border shrink-0 h-screen bg-background group/col">
   <!-- Header -->
-  <div
-    class="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b border-border p-2.5 flex flex-col gap-2 cursor-grab active:cursor-grabbing"
-    draggable={!!onDragStart}
-    ondragstart={onDragStart}
-  >
+  <div class="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b border-border p-2.5 flex flex-col gap-2">
     <div class="flex justify-between items-center h-6">
       <h2 class="font-semibold text-sm tracking-tight truncate pr-2 flex-1">{displayTitle}</h2>
 
