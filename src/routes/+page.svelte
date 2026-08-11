@@ -11,8 +11,8 @@
   let isSettingsOpen = $state(false);
 
   // Manage active columns state
-  type ColumnType = 'home' | 'search' | 'users' | 'notifications' | 'profile';
-  type ColumnDef = { id: string, type: ColumnType, title: string, query?: string };
+  type ColumnType = 'home' | 'search' | 'users' | 'notifications' | 'profile' | 'thread';
+  type ColumnDef = { id: string, type: ColumnType, title: string, query?: string, uri?: string };
 
   // Start with all standard columns visible by default
   let columns = $state<ColumnDef[]>([
@@ -73,6 +73,16 @@
       scrollToColumn(existing.id);
     } else {
       columns = [...columns, { id: `col-profile-${Date.now()}`, type: 'profile', title: handle, query: handle }];
+      scrollToEnd();
+    }
+  }
+
+  function openThread(uri: string) {
+    const existing = columns.find(c => c.type === 'thread' && c.uri === uri);
+    if (existing) {
+      scrollToColumn(existing.id);
+    } else {
+      columns = [...columns, { id: `col-thread-${Date.now()}`, type: 'thread', title: 'Thread', uri }];
       scrollToEnd();
     }
   }
@@ -230,8 +240,10 @@
               type={col.type}
               title={col.title}
               bind:searchQuery={col.query}
+              uri={col.uri}
               onClose={() => removeColumn(col.id)}
               onOpenProfile={openProfile}
+              onOpenThread={openThread}
             />
           </div>
         {/each}

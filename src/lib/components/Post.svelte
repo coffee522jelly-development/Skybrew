@@ -4,8 +4,9 @@
   import { agent } from '$lib/api';
   import { RichText } from '@atproto/api';
   import { toast } from 'svelte-sonner';
+  import { openUrl } from '@tauri-apps/plugin-opener';
 
-  let { post = $bindable(), onOpenProfile, highlightWord = '' } = $props<{ post: any, onOpenProfile?: (handle: string) => void, highlightWord?: string }>();
+  let { post = $bindable(), onOpenProfile, onOpenThread, highlightWord = '' } = $props<{ post: any, onOpenProfile?: (handle: string) => void, onOpenThread?: (uri: string) => void, highlightWord?: string }>();
 
   let author = $derived(post.author);
   let record = $derived(post.record);
@@ -25,18 +26,41 @@
 
   let textChunks = $derived.by(() => {
     const text = record.text || '';
-    if (!highlightWord.trim()) return [{ text, match: false }];
+    const rt = new RichText({ text, facets: record.facets || [] });
 
-    const words = highlightWord.trim().split(/\s+/).filter(Boolean);
-    if (words.length === 0) return [{ text, match: false }];
+    const words = highlightWord.trim() ? highlightWord.trim().split(/\s+/).filter(Boolean) : [];
+    const pattern = words.length > 0 ? new RegExp(`(${words.map(escapeRegExp).join('|')})`, 'gi') : null;
 
-    const pattern = new RegExp(`(${words.map(escapeRegExp).join('|')})`, 'gi');
-    const parts = text.split(pattern);
+    let segments = [];
 
-    return parts.map((part: string) => {
-       const match = words.some((w: string) => part.toLowerCase() === w.toLowerCase());
-       return { text: part, match };
-    }).filter((p: any) => p.text);
+    for (const segment of rt.segments()) {
+      if (pattern) {
+        const parts = segment.text.split(pattern);
+        for (const part of parts) {
+          if (!part) continue;
+          const match = words.some((w: string) => part.toLowerCase() === w.toLowerCase());
+          segments.push({
+            text: part,
+            match,
+            isLink: segment.isLink(),
+            linkUri: segment.link?.uri,
+            isMention: segment.isMention(),
+            mentionHandle: segment.isMention() ? segment.text.replace('@', '') : undefined,
+          });
+        }
+      } else {
+        segments.push({
+          text: segment.text,
+          match: false,
+          isLink: segment.isLink(),
+          linkUri: segment.link?.uri,
+          isMention: segment.isMention(),
+          mentionHandle: segment.isMention() ? segment.text.replace('@', '') : undefined,
+        });
+      }
+    }
+
+    return segments;
   });
 
   let isReplying = $state(false);
@@ -127,7 +151,16 @@
   }
 </script>
 
-<div class="p-3 border-b border-border hover:bg-surface/50 transition-colors text-xs">
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+  class="p-3 border-b border-border hover:bg-surface/50 transition-colors text-xs cursor-pointer"
+  onclick={(e) => {
+    // Only open thread if the click wasn't on a button or link
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a')) return;
+    onOpenThread?.(post.uri);
+  }}
+>
   <div class="flex gap-2.5">
     <!-- Avatar -->
     <button
@@ -156,7 +189,11 @@
 
       <div class="text-foreground leading-snug break-words whitespace-pre-wrap mb-2">
         {#each textChunks as chunk}
-          {#if chunk.match}
+          {#if chunk.isLink}
+            <button class="text-primary hover:underline text-left inline" onclick={async (e) => { e.stopPropagation(); if (chunk.linkUri) await openUrl(chunk.linkUri); }}>{#if chunk.match}<mark class="bg-highlight/50 text-foreground px-0.5 rounded-sm font-semibold shadow-[0_0_2px_rgb(var(--highlight))]">{chunk.text}</mark>{:else}{chunk.text}{/if}</button>
+          {:else if chunk.isMention}
+            <button class="text-primary hover:underline text-left inline" onclick={(e) => { e.stopPropagation(); onOpenProfile?.(chunk.mentionHandle); }}>{#if chunk.match}<mark class="bg-highlight/50 text-foreground px-0.5 rounded-sm font-semibold shadow-[0_0_2px_rgb(var(--highlight))]">{chunk.text}</mark>{:else}{chunk.text}{/if}</button>
+          {:else if chunk.match}
             <mark class="bg-highlight/50 text-foreground px-0.5 rounded-sm font-semibold shadow-[0_0_2px_rgb(var(--highlight))]">{chunk.text}</mark>
           {:else}
             {chunk.text}

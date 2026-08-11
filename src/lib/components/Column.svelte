@@ -5,13 +5,15 @@
   import Post from './Post.svelte';
   import { RefreshCw, Bell, Search as SearchIcon, X } from 'lucide-svelte';
 
-  let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), onClose, onOpenProfile } = $props<{
+  let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), uri, onClose, onOpenProfile, onOpenThread } = $props<{
     title?: string,
-    type?: 'home' | 'notifications' | 'profile' | 'search' | 'users',
+    type?: 'home' | 'notifications' | 'profile' | 'search' | 'users' | 'thread',
     initialQuery?: string,
     searchQuery?: string,
+    uri?: string,
     onClose?: () => void,
-    onOpenProfile?: (handle: string) => void
+    onOpenProfile?: (handle: string) => void,
+    onOpenThread?: (uri: string) => void
   }>();
 
   let feed = $state<any[]>([]);
@@ -69,6 +71,26 @@
         response = await agent.searchActors({ q: searchQuery, limit: 30 });
         actors = response.data.actors;
         displayTitle = `Users: ${searchQuery}`;
+      } else if (type === 'thread' && uri) {
+        response = await agent.getPostThread({ uri, depth: 10, parentHeight: 10 });
+        const thread: any = response.data.thread;
+        // Flatten thread into feed array
+        const flatFeed: any[] = [];
+        if (thread.parent) {
+          let curr = thread.parent;
+          const parents = [];
+          while (curr) {
+            parents.unshift({ post: curr.post });
+            curr = curr.parent;
+          }
+          flatFeed.push(...parents);
+        }
+        flatFeed.push({ post: thread.post, isMain: true });
+        if (thread.replies) {
+          flatFeed.push(...thread.replies.map((r: any) => ({ post: r.post })));
+        }
+        feed = flatFeed;
+        displayTitle = `Thread`;
       }
     } catch (err: any) {
       error = `Failed to load ${displayTitle}`;
@@ -265,7 +287,9 @@
                 </div>
              </div>
           {:else if item.post}
-             <Post post={item.post} {onOpenProfile} highlightWord={type === 'search' ? searchQuery : ''} />
+             <div class={item.isMain ? 'border-l-4 border-l-primary bg-surface/30' : ''}>
+               <Post post={item.post} {onOpenProfile} highlightWord={type === 'search' ? searchQuery : ''} {onOpenThread} />
+             </div>
           {/if}
         {/each}
       </div>
