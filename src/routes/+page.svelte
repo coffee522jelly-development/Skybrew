@@ -4,11 +4,13 @@
   import LoginForm from '$lib/components/LoginForm.svelte';
   import Column from '$lib/components/Column.svelte';
   import SettingsDialog from '$lib/components/SettingsDialog.svelte';
-  import { Settings, LogOut, Home, Bell, Search, User, X, Plus, Users } from 'lucide-svelte';
+  import Composer from '$lib/components/Composer.svelte';
+  import { Settings, LogOut, Home, Bell, Search, User, X, Plus, Users, Feather } from 'lucide-svelte';
   import { toast } from 'svelte-sonner';
 
   let isStoreLoaded = $state(false);
   let isSettingsOpen = $state(false);
+  let isComposerOpen = $state(false);
 
   // Manage active columns state
   type ColumnType = 'home' | 'search' | 'users' | 'notifications' | 'profile' | 'thread';
@@ -124,6 +126,14 @@
       </div>
 
       <div class="flex-1 flex flex-col gap-1 p-2 mt-2 overflow-y-auto">
+        <button
+          onclick={() => isComposerOpen = true}
+          class="flex items-center justify-center md:justify-start gap-3 p-2 mb-2 rounded bg-primary text-white hover:opacity-90 transition-opacity font-bold shadow-sm"
+        >
+          <Feather size={16} />
+          <span class="hidden md:block text-xs">Post</span>
+        </button>
+
         <button
           onclick={() => toggleColumn('home', 'Home')}
           class="flex items-center gap-3 p-2 rounded transition-colors {activeTypes.has('home') ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-surface text-secondary'}"
@@ -251,5 +261,6 @@
     </main>
 
     <SettingsDialog bind:open={isSettingsOpen} />
+    <Composer bind:open={isComposerOpen} />
   </div>
 {/if}
