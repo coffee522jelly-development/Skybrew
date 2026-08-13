@@ -80,6 +80,8 @@
   }
 
   function openThread(uri: string) {
+    toast.success('Loading thread: ' + uri);
+    console.log('openThread called with URI:', uri);
     const existing = columns.find(c => c.type === 'thread' && c.uri === uri);
     if (existing) {
       scrollToColumn(existing.id);
