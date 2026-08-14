@@ -6,8 +6,9 @@ export type Theme = 'light' | 'dark' | 'system';
 export const appState = $state({
   theme: 'system' as Theme,
   fontFamily: 'Inter, Avenir, Helvetica, Arial, sans-serif',
-  fontSize: 16,
+  fontSize: 14,
   primaryColor: '#2563eb', // Default blue
+  highlightColor: '#f97316', // Default orange
   session: null as any | null,
 });
 
@@ -17,17 +18,32 @@ export async function initStore() {
   if (typeof window !== 'undefined') {
     // Only run in client
     try {
-      store = await load('settings.json', { autoSave: true });
+      if ((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI_IPC__) {
+        store = await load('settings.json', { autoSave: true });
+      } else {
+        console.warn("Tauri environment not detected, using localStorage mock.");
+        store = {
+          get: async (k: string) => {
+            const v = localStorage.getItem('skybrew_' + k);
+            return v ? JSON.parse(v) : null;
+          },
+          set: async (k: string, v: any) => {
+            localStorage.setItem('skybrew_' + k, JSON.stringify(v));
+          }
+        };
+      }
       const savedTheme = await store.get('theme');
       const savedFontFamily = await store.get('fontFamily');
       const savedFontSize = await store.get('fontSize');
       const savedPrimaryColor = await store.get('primaryColor');
+      const savedHighlightColor = await store.get('highlightColor');
       const savedSession = await store.get('session');
 
       if (savedTheme) appState.theme = savedTheme as Theme;
       if (savedFontFamily) appState.fontFamily = savedFontFamily as string;
       if (savedFontSize) appState.fontSize = savedFontSize as number;
       if (savedPrimaryColor) appState.primaryColor = savedPrimaryColor as string;
+      if (savedHighlightColor) appState.highlightColor = savedHighlightColor as string;
       if (savedSession) {
         try {
            await agent.resumeSession(savedSession as any);
