@@ -72,7 +72,9 @@
         actors = response.data.actors;
         displayTitle = `Users: ${searchQuery}`;
       } else if (type === 'thread' && uri) {
+        console.log('Fetching thread for URI:', uri);
         response = await agent.getPostThread({ uri, depth: 10, parentHeight: 10 });
+        console.log('Thread API response:', response.data);
         const thread: any = response.data.thread;
         // Flatten thread into feed array
         const flatFeed: any[] = [];

@@ -157,6 +157,7 @@
   class="p-3 border-b border-border hover:bg-surface/50 transition-colors text-xs cursor-pointer"
   onclick={(e) => {
     // Only open thread if the click wasn't on a button or link
+    console.log("Post clicked!");
     if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a')) return;
     onOpenThread?.(post.uri);
   }}
