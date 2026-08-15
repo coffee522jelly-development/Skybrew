@@ -8,3 +8,11 @@ node_modules
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# testing
+playwright-report/
+test-results/
+debug.png
+debug2.png
+npm_output.log
+debug_xs.png
