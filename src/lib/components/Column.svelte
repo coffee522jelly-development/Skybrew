@@ -3,7 +3,8 @@
   import { agent } from '$lib/api';
   import { appState } from '$lib/store.svelte';
   import Post from './Post.svelte';
-  import { RefreshCw, Bell, Search as SearchIcon, X } from 'lucide-svelte';
+  import SearchAnalytics from './SearchAnalytics.svelte';
+  import { RefreshCw, Bell, Search as SearchIcon, X, BarChart2 } from 'lucide-svelte';
 
   let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), uri, onClose, onOpenProfile, onOpenThread } = $props<{
     title?: string,
@@ -24,6 +25,7 @@
   let loading = $state(true);
   let displayTitle = $state('');
   let profileData = $state<any>(null);
+  let showAnalytics = $state(false);
 
   $effect(() => {
      if (type === 'search' && !searchQuery && initialQuery) {
@@ -140,6 +142,15 @@
       <h2 class="font-semibold text-sm tracking-tight truncate pr-2 flex-1">{displayTitle}</h2>
 
       <div class="flex items-center gap-1 shrink-0">
+        {#if type === 'search'}
+          <button
+            onclick={() => showAnalytics = !showAnalytics}
+            class="p-1 hover:bg-surface rounded transition-colors text-secondary {showAnalytics ? 'text-primary bg-primary/10' : ''}"
+            title="分析ビューを切り替え"
+          >
+            <BarChart2 size={14} />
+          </button>
+        {/if}
         <button
           onclick={refresh}
           disabled={loading || isRefreshing || (type === 'search' && !searchQuery.trim())}
@@ -170,6 +181,11 @@
         />
         <SearchIcon size={12} class="absolute left-2.5 top-2 text-secondary" />
       </form>
+    {/if}
+
+    <!-- Search Analytics Panel -->
+    {#if type === 'search' && showAnalytics && searchQuery.trim()}
+      <SearchAnalytics query={searchQuery} />
     {/if}
   </div>
 
