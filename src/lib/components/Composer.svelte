@@ -1,21 +1,76 @@
 <script lang="ts">
   import { agent } from '$lib/api';
+  import { saveDraft, deleteDraft, appState, type PostDraft } from '$lib/store.svelte';
   import { RichText } from '@atproto/api';
   import { toast } from 'svelte-sonner';
-  import { X, Image as ImageIcon } from 'lucide-svelte';
+  import { X, Image as ImageIcon, Bookmark, Trash2, FileText } from 'lucide-svelte';
 
   let { open = $bindable(false) } = $props<{ open?: boolean }>();
 
   type ImageItem = {
-    file: File;
+    file?: File;
     dataUrl: string;
     alt: string;
   };
 
   let text = $state('');
   let images = $state<ImageItem[]>([]);
+  let currentDraftId = $state<string | null>(null);
+  let isDraftsModalOpen = $state(false);
   let isLoading = $state(false);
   let fileInput = $state<HTMLInputElement | null>(null);
+
+  function dataURLtoFile(dataurl: string, filename: string): File {
+    const arr = dataurl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  }
+
+  async function handleSaveDraft() {
+    if (!text.trim() && images.length === 0) return;
+    const id = currentDraftId || `draft-${Date.now()}`;
+    await saveDraft({
+      id,
+      text,
+      images: images.map(img => ({ dataUrl: img.dataUrl, alt: img.alt })),
+    });
+    currentDraftId = id;
+    toast.success('下書きを保存しました');
+  }
+
+  function loadDraft(draft: PostDraft) {
+    text = draft.text;
+    images = draft.images.map((img, i) => ({
+      dataUrl: img.dataUrl,
+      alt: img.alt,
+      file: dataURLtoFile(img.dataUrl, `draft_img_${i}.png`)
+    }));
+    currentDraftId = draft.id;
+    isDraftsModalOpen = false;
+    toast.info('下書きを読み込みました');
+  }
+
+  async function handleDeleteDraft(id: string, e: MouseEvent) {
+    e.stopPropagation();
+    await deleteDraft(id);
+    if (currentDraftId === id) {
+      currentDraftId = null;
+    }
+    toast.info('下書きを削除しました');
+  }
+
+  function resetForm() {
+    text = '';
+    images = [];
+    currentDraftId = null;
+  }
 
   function handleFileSelect(e: Event) {
     const target = e.target as HTMLInputElement;
@@ -57,8 +112,10 @@
       let embed: any = undefined;
       if (images.length > 0) {
         const uploadedImages = [];
-        for (const img of images) {
-          const res = await agent.uploadBlob(img.file, { encoding: img.file.type });
+        for (let i = 0; i < images.length; i++) {
+          const img = images[i];
+          const fileToUpload = img.file || dataURLtoFile(img.dataUrl, `upload_${i}.png`);
+          const res = await agent.uploadBlob(fileToUpload, { encoding: fileToUpload.type });
           uploadedImages.push({
             image: res.data.blob,
             alt: img.alt || ''
@@ -77,10 +134,13 @@
         createdAt: new Date().toISOString(),
       });
 
+      if (currentDraftId) {
+        await deleteDraft(currentDraftId);
+      }
+
       toast.success('投稿しました');
       open = false;
-      text = '';
-      images = [];
+      resetForm();
     } catch (e: any) {
       toast.error(e.message || '投稿に失敗しました');
       console.error(e);
@@ -102,12 +162,22 @@
       <!-- Header -->
       <div class="flex items-center justify-between p-3 border-b border-border">
         <h2 class="font-bold text-sm">新規投稿</h2>
-        <button
-          onclick={() => open = false}
-          class="p-1 rounded-full hover:bg-destructive/10 text-secondary hover:text-destructive transition-colors"
-        >
-          <X size={16} />
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            onclick={() => isDraftsModalOpen = true}
+            class="flex items-center gap-1 text-xs text-secondary hover:text-primary px-2 py-1 rounded hover:bg-background transition-colors"
+          >
+            <FileText size={14} />
+            <span>下書き ({appState.drafts.length})</span>
+          </button>
+          <button
+            onclick={() => open = false}
+            class="p-1 rounded-full hover:bg-destructive/10 text-secondary hover:text-destructive transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       <!-- Body -->
@@ -172,9 +242,19 @@
         </div>
         <div class="flex gap-2">
           <button
+            type="button"
+            onclick={handleSaveDraft}
+            disabled={(!text.trim() && images.length === 0) || isLoading}
+            class="flex items-center gap-1 px-3 py-1.5 rounded text-xs border border-border hover:bg-surface transition-colors disabled:opacity-40"
+            title="下書き保存"
+          >
+            <Bookmark size={14} />
+            <span>下書き保存</span>
+          </button>
+          <button
             onclick={() => open = false}
             disabled={isLoading}
-            class="px-4 py-1.5 rounded text-xs border border-border hover:bg-surface transition-colors disabled:opacity-50"
+            class="px-3 py-1.5 rounded text-xs border border-border hover:bg-surface transition-colors disabled:opacity-50"
           >
             キャンセル
           </button>
@@ -188,5 +268,51 @@
         </div>
       </div>
     </div>
+
+    <!-- Drafts Modal -->
+    {#if isDraftsModalOpen}
+      <div class="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4">
+        <div class="bg-surface border border-border rounded-lg shadow-2xl w-full max-w-md p-4 flex flex-col gap-3 max-h-[80vh]">
+          <div class="flex items-center justify-between border-b border-border pb-2">
+            <h3 class="font-bold text-sm">保存された下書き</h3>
+            <button onclick={() => isDraftsModalOpen = false} class="p-1 text-secondary hover:text-foreground">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto flex flex-col gap-2 my-1">
+            {#if appState.drafts.length === 0}
+              <p class="text-xs text-secondary text-center py-6">保存された下書きはありません。</p>
+            {:else}
+              {#each appState.drafts as draft (draft.id)}
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div
+                  onclick={() => loadDraft(draft)}
+                  class="p-2.5 rounded border border-border bg-background hover:border-primary cursor-pointer flex items-start justify-between group transition-colors"
+                >
+                  <div class="flex-1 pr-2">
+                    <p class="text-xs text-foreground line-clamp-2">{draft.text || '(画像のみの投稿)'}</p>
+                    <div class="flex items-center gap-2 mt-1.5 text-[10px] text-secondary">
+                      <span>{new Date(draft.updatedAt).toLocaleString('ja-JP')}</span>
+                      {#if draft.images.length > 0}
+                        <span>• 画像 {draft.images.length} 枚</span>
+                      {/if}
+                    </div>
+                  </div>
+                  <button
+                    onclick={(e) => handleDeleteDraft(draft.id, e)}
+                    class="p-1 text-secondary hover:text-destructive opacity-80 group-hover:opacity-100 transition-opacity"
+                    title="削除"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              {/each}
+            {/if}
+          </div>
+        </div>
+      </div>
+    {/if}
   </div>
 {/if}

@@ -5,12 +5,15 @@
   import Column from '$lib/components/Column.svelte';
   import SettingsDialog from '$lib/components/SettingsDialog.svelte';
   import Composer from '$lib/components/Composer.svelte';
-  import { Settings, LogOut, Home, Bell, Search, User, X, Plus, Users, Feather } from 'lucide-svelte';
+  import { switchAccount, removeAccountSession } from '$lib/store.svelte';
+  import { Settings, LogOut, Home, Bell, Search, User, X, Plus, Users, Feather, UserCheck, UserPlus, ChevronUp } from 'lucide-svelte';
   import { toast } from 'svelte-sonner';
 
   let isStoreLoaded = $state(false);
   let isSettingsOpen = $state(false);
   let isComposerOpen = $state(false);
+  let isAccountMenuOpen = $state(false);
+  let isAddingAccount = $state(false);
 
   // Manage active columns state
   type ColumnType = 'home' | 'search' | 'users' | 'notifications' | 'profile' | 'thread';
@@ -37,7 +40,7 @@
   async function handleLogout() {
     appState.session = null;
     try {
-      if (typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI_IPC__)) {
+      if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__?.invoke) {
         const { load } = await import('@tauri-apps/plugin-store');
         const store = await load('settings.json', { autoSave: true });
         await store.set('session', null);
@@ -224,7 +227,70 @@
         </button>
       </div>
 
-      <div class="p-2 border-t border-border flex flex-col gap-1">
+      <div class="p-2 border-t border-border flex flex-col gap-1 relative">
+        <!-- Account Switcher Popover -->
+        {#if isAccountMenuOpen}
+          <div class="absolute bottom-full left-2 mb-2 w-56 bg-surface border border-border rounded-lg shadow-xl p-2 z-50 flex flex-col gap-1 text-xs">
+            <div class="px-2 py-1 font-bold text-secondary text-[11px] border-b border-border mb-1">
+              アカウント切替
+            </div>
+            {#each appState.savedAccounts as acc}
+              <div class="flex items-center justify-between p-1.5 rounded hover:bg-background transition-colors {appState.session?.did === acc.did ? 'bg-primary/10 font-bold text-primary' : ''}">
+                <button
+                  class="flex-1 text-left truncate mr-2"
+                  onclick={async () => {
+                    if (appState.session?.did !== acc.did) {
+                      const ok = await switchAccount(acc.did);
+                      if (ok) toast.success(`@${acc.handle} に切り替えました`);
+                      else toast.error('アカウント切り替えに失敗しました');
+                    }
+                    isAccountMenuOpen = false;
+                  }}
+                >
+                  @{acc.handle}
+                </button>
+                <button
+                  onclick={async (e) => {
+                    e.stopPropagation();
+                    await removeAccountSession(acc.did);
+                    toast.info(`@${acc.handle} を削除しました`);
+                  }}
+                  class="p-1 hover:text-destructive text-secondary"
+                  title="アカウント解除"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            {/each}
+
+            <button
+              onclick={() => {
+                isAddingAccount = true;
+                isAccountMenuOpen = false;
+              }}
+              class="flex items-center gap-2 p-1.5 mt-1 rounded border border-dashed border-border hover:bg-background text-primary font-medium w-full text-left"
+            >
+              <UserPlus size={14} />
+              <span>アカウントを追加</span>
+            </button>
+          </div>
+        {/if}
+
+        <!-- Current Account Button -->
+        <button
+          onclick={() => isAccountMenuOpen = !isAccountMenuOpen}
+          class="flex items-center justify-between p-2 rounded hover:bg-surface transition-colors w-full text-secondary"
+          title="アカウント切り替え"
+        >
+          <div class="flex items-center gap-2 truncate">
+            <UserCheck size={14} class="text-primary shrink-0" />
+            <span class="hidden md:block text-xs font-semibold truncate">
+              @{appState.session?.handle || 'Account'}
+            </span>
+          </div>
+          <ChevronUp size={12} class="hidden md:block shrink-0 opacity-60" />
+        </button>
+
         <button
           onclick={() => isSettingsOpen = true}
           class="flex items-center gap-2 p-2 rounded hover:bg-surface transition-colors w-full text-secondary"
@@ -264,5 +330,11 @@
 
     <SettingsDialog bind:open={isSettingsOpen} />
     <Composer bind:open={isComposerOpen} />
+
+    {#if isAddingAccount}
+      <div class="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <LoginForm onCancel={() => isAddingAccount = false} />
+      </div>
+    {/if}
   </div>
 {/if}

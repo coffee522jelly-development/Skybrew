@@ -1,6 +1,8 @@
 <script lang="ts">
   import { agent } from '$lib/api';
-  import { updateSetting, appState } from '$lib/store.svelte';
+  import { addOrUpdateAccountSession } from '$lib/store.svelte';
+
+  let { onCancel } = $props<{ onCancel?: () => void }>();
 
   let identifier = $state('');
   let password = $state('');
@@ -14,8 +16,8 @@
 
     try {
       const { data } = await agent.login({ identifier, password });
-      appState.session = data;
-      await updateSetting('session', data);
+      await addOrUpdateAccountSession(data);
+      if (onCancel) onCancel();
     } catch (err: any) {
       error = err.message || 'Login failed';
       console.error(err);
@@ -62,13 +64,24 @@
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        class="w-full py-1.5 px-4 mt-2 bg-primary text-white text-sm rounded shadow hover:opacity-90 disabled:opacity-50 transition-all font-semibold tracking-wide"
-      >
-        {isLoading ? 'Logging in...' : 'Login'}
-      </button>
+      <div class="flex gap-2 mt-2">
+        {#if onCancel}
+          <button
+            type="button"
+            onclick={onCancel}
+            class="flex-1 py-1.5 px-3 bg-surface border border-border text-secondary text-sm rounded hover:bg-background transition-colors"
+          >
+            キャンセル
+          </button>
+        {/if}
+        <button
+          type="submit"
+          disabled={isLoading}
+          class="flex-1 py-1.5 px-4 bg-primary text-white text-sm rounded shadow hover:opacity-90 disabled:opacity-50 transition-all font-semibold tracking-wide"
+        >
+          {isLoading ? 'Logging in...' : 'Login'}
+        </button>
+      </div>
     </form>
   </div>
 </div>
