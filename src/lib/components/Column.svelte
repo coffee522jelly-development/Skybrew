@@ -4,21 +4,23 @@
   import { appState } from '$lib/store.svelte';
   import Post from './Post.svelte';
   import SearchAnalytics from './SearchAnalytics.svelte';
-  import { RefreshCw, Bell, Search as SearchIcon, X, BarChart2 } from 'lucide-svelte';
+  import { RefreshCw, Bell, Search as SearchIcon, X, BarChart2, TrendingUp, Hash } from 'lucide-svelte';
 
-  let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), uri, onClose, onOpenProfile, onOpenThread } = $props<{
+  let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), uri, onClose, onOpenProfile, onOpenThread, onOpenSearch } = $props<{
     title?: string,
-    type?: 'home' | 'notifications' | 'profile' | 'search' | 'users' | 'thread',
+    type?: 'home' | 'notifications' | 'profile' | 'search' | 'users' | 'thread' | 'trends',
     initialQuery?: string,
     searchQuery?: string,
     uri?: string,
     onClose?: () => void,
     onOpenProfile?: (handle: string) => void,
-    onOpenThread?: (uri: string) => void
+    onOpenThread?: (uri: string) => void,
+    onOpenSearch?: (query: string) => void
   }>();
 
   let feed = $state<any[]>([]);
   let actors = $state<any[]>([]);
+  let trendTopics = $state<{ word: string; count: number; isHashtag: boolean }[]>([]);
   let error = $state('');
   let isRefreshing = $state(false);
 
@@ -73,6 +75,46 @@
         response = await agent.searchActors({ q: searchQuery, limit: 30 });
         actors = response.data.actors;
         displayTitle = `Users: ${searchQuery}`;
+      } else if (type === 'trends') {
+        displayTitle = 'Trends (トレンド)';
+        const timelineRes = await agent.getTimeline({ limit: 50 }).catch(() => ({ data: { feed: [] } }));
+        const samplePosts = timelineRes.data.feed || [];
+
+        const wordMap = new Map<string, number>();
+        const stopWords = new Set(['https', 'http', 'com', 'org', 'the', 'and', 'for', 'this', 'that', 'with', 'from', 'have', 'there', 'what', 'your', 'about', 'https:', 'http:']);
+
+        for (const item of samplePosts) {
+          const text = (item.post?.record as any)?.text || '';
+          if (!text) continue;
+
+          const hashtags = text.match(/#[\w\u3040-\u30ff\u4e00-\u9faf]+/g) || [];
+          for (const tag of hashtags) {
+            wordMap.set(tag, (wordMap.get(tag) || 0) + 1);
+          }
+
+          const tokens = text.split(/[\s,.:;!?"'()\[\]{}／＼〜～、。「」『』・\n\r\t]+/);
+          for (const token of tokens) {
+            const cleanToken = token.trim();
+            const lowerToken = cleanToken.toLowerCase();
+            if (
+              cleanToken.length >= 2 &&
+              !cleanToken.startsWith('#') &&
+              !cleanToken.startsWith('http') &&
+              !stopWords.has(lowerToken)
+            ) {
+              wordMap.set(cleanToken, (wordMap.get(cleanToken) || 0) + 1);
+            }
+          }
+        }
+
+        trendTopics = Array.from(wordMap.entries())
+          .map(([word, count]) => ({
+            word,
+            count,
+            isHashtag: word.startsWith('#')
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 15);
       } else if (type === 'thread' && uri) {
         console.log('Fetching thread for URI:', uri);
         response = await agent.getPostThread({ uri, depth: 10, parentHeight: 10 });
@@ -126,10 +168,12 @@
     }, 0);
 
     const interval = setInterval(() => {
-      if (!isRefreshing && type !== 'search') {
-        loadFeed().catch(() => {});
+      if (!isRefreshing) {
+        if (type === 'home' || (type === 'search' && searchQuery.trim())) {
+          loadFeed().catch(() => {});
+        }
       }
-    }, 30000);
+    }, 60000);
 
     return () => clearInterval(interval);
   });
@@ -185,7 +229,16 @@
 
     <!-- Search Analytics Panel -->
     {#if type === 'search' && showAnalytics && searchQuery.trim()}
-      <SearchAnalytics query={searchQuery} />
+      <SearchAnalytics
+        query={searchQuery}
+        onSelectKeyword={(word) => {
+          if (onOpenSearch) onOpenSearch(word);
+          else {
+            searchQuery = word;
+            loadFeed();
+          }
+        }}
+      />
     {/if}
   </div>
 
@@ -294,8 +347,41 @@
             </button>
           </div>
         {/each}
-        {#each feed as item}
-          {#if type === 'notifications'}
+        {#if type === 'trends'}
+          <div class="p-3 flex flex-col gap-2">
+            <div class="flex items-center gap-1.5 pb-2 border-b border-border text-xs text-secondary font-medium">
+              <TrendingUp size={14} class="text-primary" />
+              <span>注目の話題 & 流行ワード Top 15</span>
+            </div>
+            {#if trendTopics.length === 0}
+              <p class="text-xs text-secondary text-center py-8">トレンドデータを計算中...</p>
+            {:else}
+              <div class="flex flex-col gap-1.5 mt-1">
+                {#each trendTopics as topic, idx}
+                  <button
+                    onclick={() => onOpenSearch?.(topic.word)}
+                    class="flex items-center justify-between p-2 rounded border border-border bg-surface/30 hover:bg-surface hover:border-primary/50 transition-colors text-left group"
+                  >
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <span class="w-4 text-center text-xs font-bold text-secondary group-hover:text-primary">{idx + 1}</span>
+                      <div class="flex items-center gap-1 min-w-0">
+                        {#if topic.isHashtag}
+                          <Hash size={12} class="text-primary shrink-0" />
+                        {/if}
+                        <span class="text-xs font-semibold text-foreground truncate">{topic.word}</span>
+                      </div>
+                    </div>
+                    <span class="text-[10px] text-secondary bg-background px-1.5 py-0.5 rounded border border-border shrink-0">
+                      {topic.count} ポスト
+                    </span>
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        {:else}
+          {#each feed as item}
+            {#if type === 'notifications'}
              <div class="p-3 border-b border-border hover:bg-surface/50 flex gap-2 text-xs">
                 <Bell size={14} class="text-primary shrink-0 mt-0.5" />
                 <div class="min-w-0">
@@ -304,12 +390,13 @@
                   <div class="text-secondary text-[10px] mt-1 leading-tight">Notification format may vary.</div>
                 </div>
              </div>
-          {:else if item.post}
+            {:else if item.post}
              <div class={item.isMain ? 'border-l-4 border-l-primary bg-surface/30' : ''}>
                <Post post={item.post} {onOpenProfile} highlightWord={type === 'search' ? searchQuery : ''} {onOpenThread} />
              </div>
-          {/if}
-        {/each}
+            {/if}
+          {/each}
+        {/if}
       </div>
     {/if}
   </div>

@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { agent } from '$lib/api';
-  import { TrendingUp, TrendingDown, Minus, RefreshCw, BarChart2 } from 'lucide-svelte';
+  import { TrendingUp, TrendingDown, Minus, RefreshCw, BarChart2, Hash, Tag } from 'lucide-svelte';
 
-  let { query = '' } = $props<{ query: string }>();
+  let { query = '', onSelectKeyword }: { query: string; onSelectKeyword?: (word: string) => void } = $props();
 
   let isLoading = $state(false);
   let hourlyCounts = $state<number[]>(new Array(24).fill(0));
+  let topKeywords = $state<{ word: string; count: number; isHashtag: boolean }[]>([]);
   let recentCount = $state(0);
   let prev24Count = $state(0);
   let percentChange = $state(0);
@@ -57,6 +58,52 @@
       } else {
         percentChange = Math.round(((recentCount - prev24Count) / prev24Count) * 100);
       }
+
+      // Extract Frequent Keywords & Hashtags
+      const wordMap = new Map<string, number>();
+      const stopWords = new Set(['https', 'http', 'com', 'org', 'the', 'and', 'for', 'this', 'that', 'with', 'from', 'have', 'there', 'what', 'your', 'about', 'https:', 'http:']);
+      const currentQueryLower = query.toLowerCase();
+
+      for (const post of posts) {
+        const text = (post.record as any)?.text || '';
+        if (!text) continue;
+
+        // Extract Hashtags
+        const hashtags = text.match(/#[\w\u3040-\u30ff\u4e00-\u9faf]+/g) || [];
+        for (const tag of hashtags) {
+          const lowerTag = tag.toLowerCase();
+          if (lowerTag !== currentQueryLower) {
+            wordMap.set(tag, (wordMap.get(tag) || 0) + 1);
+          }
+        }
+
+        // Extract Word tokens (>2 chars)
+        const tokens = text.split(/[\s,.:;!?"'()\[\]{}／＼〜～、。「」『』・\n\r\t]+/);
+        for (const token of tokens) {
+          const cleanToken = token.trim();
+          const lowerToken = cleanToken.toLowerCase();
+          if (
+            cleanToken.length >= 2 &&
+            !cleanToken.startsWith('#') &&
+            !cleanToken.startsWith('http') &&
+            !stopWords.has(lowerToken) &&
+            lowerToken !== currentQueryLower
+          ) {
+            wordMap.set(cleanToken, (wordMap.get(cleanToken) || 0) + 1);
+          }
+        }
+      }
+
+      const sortedWords = Array.from(wordMap.entries())
+        .map(([word, count]) => ({
+          word,
+          count,
+          isHashtag: word.startsWith('#')
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8);
+
+      topKeywords = sortedWords;
     } catch (err) {
       console.error('Failed to calculate search analytics:', err);
     } finally {
@@ -150,5 +197,30 @@
         {/each}
       </div>
     </div>
+
+    <!-- Top Frequent Keywords & Hashtags -->
+    {#if topKeywords.length > 0}
+      <div class="flex flex-col gap-1 mt-1.5 pt-1.5 border-t border-border/40">
+        <div class="text-[10px] font-semibold text-secondary flex items-center gap-1">
+          <Tag size={10} class="text-primary" />
+          <span>関連キーワード・ハッシュタグ</span>
+        </div>
+        <div class="flex flex-wrap gap-1 mt-0.5">
+          {#each topKeywords as kw}
+            <button
+              onclick={() => onSelectKeyword?.(kw.word)}
+              class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-colors border {kw.isHashtag ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20 font-medium' : 'bg-background border-border text-foreground hover:bg-surface hover:border-primary/50'}"
+              title="{kw.word} で検索"
+            >
+              {#if kw.isHashtag}
+                <Hash size={10} />
+              {/if}
+              <span>{kw.word}</span>
+              <span class="text-[9px] text-secondary">({kw.count})</span>
+            </button>
+          {/each}
+        </div>
+      </div>
+    {/if}
   {/if}
 </div>

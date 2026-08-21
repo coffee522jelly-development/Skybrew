@@ -6,7 +6,7 @@
   import SettingsDialog from '$lib/components/SettingsDialog.svelte';
   import Composer from '$lib/components/Composer.svelte';
   import { switchAccount, removeAccountSession } from '$lib/store.svelte';
-  import { Settings, LogOut, Home, Bell, Search, User, X, Plus, Users, Feather, UserCheck, UserPlus, ChevronUp } from 'lucide-svelte';
+  import { Settings, LogOut, Home, Bell, Search, User, X, Plus, Users, Feather, UserCheck, UserPlus, ChevronUp, TrendingUp } from 'lucide-svelte';
   import { toast } from 'svelte-sonner';
 
   let isStoreLoaded = $state(false);
@@ -16,7 +16,7 @@
   let isAddingAccount = $state(false);
 
   // Manage active columns state
-  type ColumnType = 'home' | 'search' | 'users' | 'notifications' | 'profile' | 'thread';
+  type ColumnType = 'home' | 'search' | 'users' | 'notifications' | 'profile' | 'thread' | 'trends';
   type ColumnDef = { id: string, type: ColumnType, title: string, query?: string, uri?: string };
 
   // Start with all standard columns visible by default
@@ -50,13 +50,23 @@
     }
   }
 
-  function toggleColumn(type: 'home' | 'notifications' | 'profile', title: string) {
+  function toggleColumn(type: 'home' | 'notifications' | 'profile' | 'trends', title: string) {
     if (activeTypes.has(type)) {
       // Remove it
       columns = columns.filter(col => col.type !== type);
     } else {
       // Add it and scroll to the end
       columns = [...columns, { id: `col-${type}-${Date.now()}`, type, title, query: '' }];
+      scrollToEnd();
+    }
+  }
+
+  function openSearchWithQuery(query: string) {
+    const existing = columns.find(c => c.type === 'search' && c.query === query);
+    if (existing) {
+      scrollToColumn(existing.id);
+    } else {
+      columns = [...columns, { id: `col-search-${Date.now()}`, type: 'search', title: `Search: ${query}`, query }];
       scrollToEnd();
     }
   }
@@ -145,6 +155,14 @@
         >
           <Home size={16} />
           <span class="hidden md:block text-xs">Home</span>
+        </button>
+
+        <button
+          onclick={() => toggleColumn('trends', 'Trends')}
+          class="flex items-center gap-3 p-2 rounded transition-colors {activeTypes.has('trends') ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-surface text-secondary'}"
+        >
+          <TrendingUp size={16} />
+          <span class="hidden md:block text-xs">Trends</span>
         </button>
 
         <!-- Search base button -->
@@ -322,6 +340,7 @@
               onClose={() => removeColumn(col.id)}
               onOpenProfile={openProfile}
               onOpenThread={openThread}
+              onOpenSearch={openSearchWithQuery}
             />
           </div>
         {/each}
