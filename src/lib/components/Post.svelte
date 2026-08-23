@@ -1,6 +1,6 @@
 <script lang="ts">
   import { formatDistanceToNow } from 'date-fns';
-  import { Heart, MessageCircle, Repeat2 } from 'lucide-svelte';
+  import { Heart, MessageCircle, Repeat2, ExternalLink } from 'lucide-svelte';
   import { agent } from '$lib/api';
   import { RichText } from '@atproto/api';
   import { toast } from 'svelte-sonner';
@@ -11,6 +11,7 @@
   let author = $derived(post.author);
   let record = $derived(post.record);
   let embed = $derived(post.embed);
+  let externalEmbed = $derived(embed?.external || record?.embed?.external || (embed?.$type === 'app.bsky.embed.external#view' ? embed.external : null));
 
   let createdAt = $derived(record.createdAt ? new Date(record.createdAt) : new Date());
   let timeAgo = $derived(formatDistanceToNow(createdAt, { addSuffix: true }));
@@ -216,6 +217,46 @@
             </div>
           {/each}
         </div>
+      {/if}
+
+      <!-- External Link Card (if any) -->
+      {#if externalEmbed}
+        <button
+          onclick={async (e) => {
+            e.stopPropagation();
+            if (externalEmbed.uri) {
+              try {
+                await openUrl(externalEmbed.uri);
+              } catch (err) {
+                console.error("Failed to open URL:", err);
+                window.open(externalEmbed.uri, '_blank');
+              }
+            }
+          }}
+          class="w-full my-2 border border-border rounded-lg overflow-hidden bg-surface/40 hover:bg-surface/80 hover:border-primary/50 transition-all text-left group block"
+        >
+          {#if externalEmbed.thumb}
+            <div class="w-full h-32 overflow-hidden bg-background border-b border-border">
+              <img
+                src={externalEmbed.thumb}
+                alt={externalEmbed.title || 'Link thumbnail'}
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+          {/if}
+          <div class="p-2.5 flex flex-col gap-1">
+            <div class="flex items-center gap-1.5 text-[10px] text-secondary font-medium">
+              <ExternalLink size={10} class="text-primary shrink-0" />
+              <span class="truncate">{externalEmbed.uri ? (function() { try { return new URL(externalEmbed.uri).hostname; } catch(e) { return externalEmbed.uri; } })() : ''}</span>
+            </div>
+            {#if externalEmbed.title}
+              <p class="font-bold text-xs text-foreground line-clamp-1 group-hover:text-primary transition-colors">{externalEmbed.title}</p>
+            {/if}
+            {#if externalEmbed.description}
+              <p class="text-[11px] text-secondary line-clamp-2 leading-tight">{externalEmbed.description}</p>
+            {/if}
+          </div>
+        </button>
       {/if}
 
       <!-- Actions -->

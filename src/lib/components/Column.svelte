@@ -4,7 +4,8 @@
   import { appState } from '$lib/store.svelte';
   import Post from './Post.svelte';
   import SearchAnalytics from './SearchAnalytics.svelte';
-  import { RefreshCw, Bell, Search as SearchIcon, X, BarChart2, TrendingUp, Hash } from 'lucide-svelte';
+  import EditProfileDialog from './EditProfileDialog.svelte';
+  import { RefreshCw, Bell, Search as SearchIcon, X, BarChart2, TrendingUp, Hash, UserPen } from 'lucide-svelte';
 
   let { title = 'Home', type = 'home', initialQuery = '', searchQuery = $bindable(''), uri, onClose, onOpenProfile, onOpenThread, onOpenSearch } = $props<{
     title?: string,
@@ -28,6 +29,7 @@
   let displayTitle = $state('');
   let profileData = $state<any>(null);
   let showAnalytics = $state(false);
+  let isEditProfileOpen = $state(false);
 
   $effect(() => {
      if (type === 'search' && !searchQuery && initialQuery) {
@@ -264,7 +266,15 @@
         {#if profileData.description}
           <p class="text-xs mb-3 whitespace-pre-wrap">{profileData.description}</p>
         {/if}
-        {#if profileData.handle !== appState.session?.handle}
+        {#if profileData.handle === appState.session?.handle}
+          <button
+            onclick={() => isEditProfileOpen = true}
+            class="w-full py-1.5 rounded text-xs font-bold border border-border bg-background hover:bg-surface text-foreground transition-colors flex items-center justify-center gap-1.5"
+          >
+            <UserPen size={14} />
+            <span>プロフィールを編集</span>
+          </button>
+        {:else}
           <button
             class="w-full py-1.5 rounded text-xs font-bold transition-colors {profileData.viewer?.following ? 'bg-surface border border-border text-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 hover:text-transparent hover:after:text-destructive hover:after:content-[\'Unfollow\'] relative flex items-center justify-center hover:after:absolute hover:after:inset-0 hover:after:flex hover:after:items-center hover:after:justify-center' : 'bg-primary text-white hover:opacity-90'}"
             onclick={async () => {
@@ -290,6 +300,11 @@
           </button>
         {/if}
       </div>
+      <EditProfileDialog
+        bind:open={isEditProfileOpen}
+        {profileData}
+        onUpdated={() => loadFeed()}
+      />
     {/if}
     {#if (type === 'search' || type === 'users') && !searchQuery.trim() && feed.length === 0 && actors.length === 0}
       <div class="p-8 flex flex-col items-center justify-center text-secondary h-full text-center space-y-3 opacity-70">
