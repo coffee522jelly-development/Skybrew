@@ -36,7 +36,6 @@
         searchQuery = initialQuery;
      }
      displayTitle = title;
-     loading = type !== 'search';
   });
 
   async function loadFeed() {
@@ -118,27 +117,39 @@
           .sort((a, b) => b.count - a.count)
           .slice(0, 15);
       } else if (type === 'thread' && uri) {
-        console.log('Fetching thread for URI:', uri);
         response = await agent.getPostThread({ uri, depth: 10, parentHeight: 10 });
-        console.log('Thread API response:', response.data);
         const thread: any = response.data.thread;
-        // Flatten thread into feed array
         const flatFeed: any[] = [];
-        if (thread.parent) {
-          let curr = thread.parent;
-          const parents = [];
-          while (curr) {
-            parents.unshift({ post: curr.post });
-            curr = curr.parent;
+
+        if (thread && thread.post) {
+          if (thread.parent) {
+            let curr = thread.parent;
+            const parents = [];
+            while (curr && curr.post) {
+              parents.unshift({ post: curr.post });
+              curr = curr.parent;
+            }
+            flatFeed.push(...parents);
           }
-          flatFeed.push(...parents);
+
+          flatFeed.push({ post: thread.post, isMain: true });
+
+          if (thread.replies && Array.isArray(thread.replies)) {
+            for (const r of thread.replies) {
+              if (r && r.post) {
+                flatFeed.push({ post: r.post });
+              }
+            }
+          }
+          feed = flatFeed;
+          displayTitle = 'Thread';
+        } else if (thread && thread.$type === 'app.bsky.feed.defs#notFoundPost') {
+          error = 'This post was deleted or not found.';
+        } else if (thread && thread.$type === 'app.bsky.feed.defs#blockedPost') {
+          error = 'This post is blocked.';
+        } else {
+          error = 'Failed to load thread.';
         }
-        flatFeed.push({ post: thread.post, isMain: true });
-        if (thread.replies) {
-          flatFeed.push(...thread.replies.map((r: any) => ({ post: r.post })));
-        }
-        feed = flatFeed;
-        displayTitle = `Thread`;
       }
     } catch (err: any) {
       error = `Failed to load ${displayTitle}`;

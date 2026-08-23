@@ -93,13 +93,12 @@
   }
 
   function openThread(uri: string) {
-    toast.success('Loading thread: ' + uri);
-    console.log('openThread called with URI:', uri);
     const existing = columns.find(c => c.type === 'thread' && c.uri === uri);
     if (existing) {
       scrollToColumn(existing.id);
     } else {
-      columns = [...columns, { id: `col-thread-${Date.now()}`, type: 'thread', title: 'Thread', uri }];
+      const id = `col-thread-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      columns = [...columns, { id, type: 'thread', title: 'Thread', uri, query: '' }];
       scrollToEnd();
     }
   }
