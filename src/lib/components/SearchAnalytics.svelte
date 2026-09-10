@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { agent } from '$lib/api';
-  import { TrendingUp, TrendingDown, Minus, RefreshCw, BarChart2, Hash, Tag } from 'lucide-svelte';
+  import { TrendingUp, TrendingDown, Minus, RefreshCw, BarChart2, Hash, Tag, Smile, Frown, Meh, Network } from 'lucide-svelte';
 
   let { query = '', onSelectKeyword }: { query: string; onSelectKeyword?: (word: string) => void } = $props();
 
@@ -12,6 +12,15 @@
   let prev24Count = $state(0);
   let percentChange = $state(0);
   let totalSampled = $state(0);
+
+  // Sentiment Analysis State
+  let posRatio = $state(0);
+  let negRatio = $state(0);
+  let neuRatio = $state(100);
+  let sentimentStatus = $state<'pos' | 'neg' | 'neu'>('neu');
+
+  // Co-occurrence Network State
+  let coOccurrenceLinks = $state<{ sourceIdx: number; targetIdx: number; strength: number }[]>([]);
 
   async function analyze() {
     if (!query.trim()) return;
@@ -101,9 +110,68 @@
           isHashtag: word.startsWith('#')
         }))
         .sort((a, b) => b.count - a.count)
-        .slice(0, 8);
+        .slice(0, 6);
 
       topKeywords = sortedWords;
+
+      // Sentiment Lexicon Analysis
+      const posWords = new Set(['楽しい', '最高', '素晴らしい', '感謝', '面白い', '好き', '神', '神曲', '嬉しい', 'おめでとう', '勝った', '勝利', '感動', 'アツい', 'good', 'great', 'awesome', 'love', 'amazing', 'happy', 'cool', 'nice', 'win']);
+      const negWords = new Set(['最悪', 'ひどい', '悲しい', '辛い', 'つらい', '死', 'ダメ', '無理', '不快', '怒り', '負け', '敗北', '炎上', 'うざい', 'クソ', 'bad', 'worst', 'sad', 'hate', 'terrible', 'annoying', 'fail']);
+
+      let posPosts = 0;
+      let negPosts = 0;
+      let neuPosts = 0;
+
+      for (const post of posts) {
+        const text = ((post.record as any)?.text || '').toLowerCase();
+        let pScore = 0;
+        let nScore = 0;
+
+        for (const pw of posWords) {
+          if (text.includes(pw)) pScore++;
+        }
+        for (const nw of negWords) {
+          if (text.includes(nw)) nScore++;
+        }
+
+        if (pScore > nScore) posPosts++;
+        else if (nScore > pScore) negPosts++;
+        else neuPosts++;
+      }
+
+      const totalEval = posts.length || 1;
+      posRatio = Math.round((posPosts / totalEval) * 100);
+      negRatio = Math.round((negPosts / totalEval) * 100);
+      neuRatio = Math.max(0, 100 - posRatio - negRatio);
+
+      if (posRatio > negRatio + 15) sentimentStatus = 'pos';
+      else if (negRatio > posRatio + 10 || negRatio > 35) sentimentStatus = 'neg';
+      else sentimentStatus = 'neu';
+
+      // Co-occurrence Network Calculation
+      const links: { sourceIdx: number; targetIdx: number; strength: number }[] = [];
+      const numNodes = sortedWords.length;
+
+      for (let i = 0; i < numNodes; i++) {
+        for (let j = i + 1; j < numNodes; j++) {
+          const w1 = sortedWords[i].word.toLowerCase();
+          const w2 = sortedWords[j].word.toLowerCase();
+          let coCount = 0;
+
+          for (const post of posts) {
+            const text = ((post.record as any)?.text || '').toLowerCase();
+            if (text.includes(w1) && text.includes(w2)) {
+              coCount++;
+            }
+          }
+
+          if (coCount > 0) {
+            links.push({ sourceIdx: i, targetIdx: j, strength: coCount });
+          }
+        }
+      }
+
+      coOccurrenceLinks = links;
     } catch (err) {
       console.error('Failed to calculate search analytics:', err);
     } finally {
@@ -183,13 +251,12 @@
         <span>投稿ボリューム分布</span>
         <span>現在</span>
       </div>
-      <div class="h-12 flex items-end gap-1 pt-1 pb-0.5 px-1 bg-background/40 rounded border border-border/40">
+      <div class="h-10 flex items-end gap-1 pt-1 pb-0.5 px-1 bg-background/40 rounded border border-border/40">
         {#each hourlyCounts as count, i}
           <div
             class="flex-1 bg-primary/70 hover:bg-primary rounded-t-sm transition-all relative group"
             style="height: {Math.max((count / maxBucket) * 100, 8)}%;"
           >
-            <!-- Tooltip -->
             <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-foreground text-background text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap z-20 pointer-events-none shadow-md">
               {24 - i}時間前: {count}件
             </div>
@@ -198,13 +265,101 @@
       </div>
     </div>
 
-    <!-- Top Frequent Keywords & Hashtags -->
+    <!-- Sentiment Analysis Meter -->
+    <div class="flex flex-col gap-1 mt-1.5 pt-1.5 border-t border-border/40">
+      <div class="flex items-center justify-between text-[10px]">
+        <div class="font-semibold text-secondary flex items-center gap-1">
+          {#if sentimentStatus === 'pos'}
+            <Smile size={12} class="text-success" />
+            <span class="text-success font-bold">ポジティブ優勢</span>
+          {:else if sentimentStatus === 'neg'}
+            <Frown size={12} class="text-destructive" />
+            <span class="text-destructive font-bold">ネガティブ警戒</span>
+          {:else}
+            <Meh size={12} class="text-primary" />
+            <span class="text-foreground font-bold">ニュートラル</span>
+          {/if}
+        </div>
+        <div class="flex gap-2 text-[9px] font-medium">
+          <span class="text-success">ポジ {posRatio}%</span>
+          <span class="text-secondary">平 {neuRatio}%</span>
+          <span class="text-destructive">ネガ {negRatio}%</span>
+        </div>
+      </div>
+
+      <!-- Sentiment Progress Bar -->
+      <div class="h-2.5 w-full rounded-full overflow-hidden flex bg-background border border-border/50">
+        <div class="bg-success transition-all duration-500" style="width: {posRatio}%;" title="ポジティブ: {posRatio}%"></div>
+        <div class="bg-secondary/40 transition-all duration-500" style="width: {neuRatio}%;" title="ニュートラル: {neuRatio}%"></div>
+        <div class="bg-destructive transition-all duration-500" style="width: {negRatio}%;" title="ネガティブ: {negRatio}%"></div>
+      </div>
+    </div>
+
+    <!-- Keyword Radar & Co-occurrence Node Network -->
     {#if topKeywords.length > 0}
       <div class="flex flex-col gap-1 mt-1.5 pt-1.5 border-t border-border/40">
         <div class="text-[10px] font-semibold text-secondary flex items-center gap-1">
-          <Tag size={10} class="text-primary" />
-          <span>関連キーワード・ハッシュタグ</span>
+          <Network size={12} class="text-primary" />
+          <span>キーワード相関レーダー (ノードマップ)</span>
         </div>
+
+        <div class="w-full aspect-[4/3] bg-background/50 rounded border border-border/40 relative overflow-hidden flex items-center justify-center p-2 my-0.5">
+          <svg class="w-full h-full" viewBox="0 0 280 180">
+            <!-- Draw Link Lines -->
+            {#each coOccurrenceLinks as link}
+              {#if topKeywords[link.sourceIdx] && topKeywords[link.targetIdx]}
+                {@const total = topKeywords.length}
+                {@const r = 60}
+                {@const cx = 140}
+                {@const cy = 90}
+                {@const x1 = cx + r * Math.cos((2 * Math.PI * link.sourceIdx) / total)}
+                {@const y1 = cy + r * Math.sin((2 * Math.PI * link.sourceIdx) / total)}
+                {@const x2 = cx + r * Math.cos((2 * Math.PI * link.targetIdx) / total)}
+                {@const y2 = cy + r * Math.sin((2 * Math.PI * link.targetIdx) / total)}
+                <line
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="currentColor"
+                  class="text-primary/40 stroke-1"
+                  stroke-width={Math.min(link.strength, 3)}
+                  stroke-dasharray={link.strength === 1 ? '2 2' : 'none'}
+                />
+              {/if}
+            {/each}
+
+            <!-- Draw Interactive Nodes -->
+            {#each topKeywords as kw, idx}
+              {@const total = topKeywords.length}
+              {@const r = 65}
+              {@const cx = 140}
+              {@const cy = 90}
+              {@const x = cx + r * Math.cos((2 * Math.PI * idx) / total)}
+              {@const y = cy + r * Math.sin((2 * Math.PI * idx) / total)}
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <g
+                transform="translate({x}, {y})"
+                class="cursor-pointer group"
+                onclick={() => onSelectKeyword?.(kw.word)}
+              >
+                <circle
+                  r={Math.min(12 + kw.count * 1.5, 22)}
+                  class="fill-surface stroke-primary/60 group-hover:stroke-primary group-hover:fill-primary/20 transition-all stroke-1"
+                />
+                <text
+                  text-anchor="middle"
+                  dy="3"
+                  class="fill-foreground font-semibold text-[9px] pointer-events-none select-none"
+                >
+                  {kw.word.length > 6 ? kw.word.slice(0, 5) + '…' : kw.word}
+                </text>
+              </g>
+            {/each}
+          </svg>
+        </div>
+
         <div class="flex flex-wrap gap-1 mt-0.5">
           {#each topKeywords as kw}
             <button
