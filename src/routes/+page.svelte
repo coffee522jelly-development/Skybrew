@@ -6,7 +6,7 @@
   import SettingsDialog from '$lib/components/SettingsDialog.svelte';
   import Composer from '$lib/components/Composer.svelte';
   import { switchAccount, removeAccountSession } from '$lib/store.svelte';
-  import { Settings, LogOut, Home, Bell, Search, User, X, Plus, Users, Feather, UserCheck, UserPlus, ChevronUp, TrendingUp } from 'lucide-svelte';
+  import { Settings, LogOut, Home, Bell, Search, User, X, Plus, Users, Feather, UserCheck, UserPlus, ChevronUp, TrendingUp, Clock } from 'lucide-svelte';
   import { toast } from 'svelte-sonner';
 
   let isStoreLoaded = $state(false);
@@ -14,6 +14,15 @@
   let isComposerOpen = $state(false);
   let isAccountMenuOpen = $state(false);
   let isAddingAccount = $state(false);
+
+  let currentTime = $state(new Date());
+
+  onMount(() => {
+    const clockTimer = setInterval(() => {
+      currentTime = new Date();
+    }, 1000);
+    return () => clearInterval(clockTimer);
+  });
 
   // Manage active columns state
   type ColumnType = 'home' | 'search' | 'users' | 'notifications' | 'profile' | 'thread' | 'trends';
@@ -245,6 +254,20 @@
       </div>
 
       <div class="p-2 border-t border-border flex flex-col gap-1 relative">
+        <!-- Real-time Clock Widget in Sidebar -->
+        <div class="p-2 my-1 rounded bg-surface/50 border border-border/50 text-secondary flex flex-col items-center md:items-start gap-0.5">
+          <div class="flex items-center gap-1.5 text-[10px] font-medium text-primary">
+            <Clock size={12} />
+            <span class="hidden md:inline">現在時刻</span>
+          </div>
+          <div class="hidden md:block text-xs font-bold text-foreground tracking-tight font-mono">
+            {currentTime.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' })}
+          </div>
+          <div class="text-[11px] font-bold text-foreground md:text-primary font-mono leading-none">
+            {currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+        </div>
+
         <!-- Account Switcher Popover -->
         {#if isAccountMenuOpen}
           <div class="absolute bottom-full left-2 mb-2 w-56 bg-surface border border-border rounded-lg shadow-xl p-2 z-50 flex flex-col gap-1 text-xs">

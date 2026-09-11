@@ -303,57 +303,91 @@
           <span>キーワード相関レーダー (ノードマップ)</span>
         </div>
 
-        <div class="w-full aspect-[4/3] bg-background/50 rounded border border-border/40 relative overflow-hidden flex items-center justify-center p-2 my-0.5">
-          <svg class="w-full h-full" viewBox="0 0 280 180">
+        <div class="w-full aspect-[16/11] bg-background/80 rounded-lg border border-border/50 relative overflow-hidden flex items-center justify-center p-1 my-1 shadow-inner">
+          <svg class="w-full h-full" viewBox="0 0 320 220">
+            <defs>
+              <filter id="node-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.25" />
+              </filter>
+              <linearGradient id="node-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="rgb(var(--primary))" stop-opacity="0.25" />
+                <stop offset="100%" stop-color="rgb(var(--primary))" stop-opacity="0.08" />
+              </linearGradient>
+            </defs>
+
+            <!-- Center Radar Grid Lines -->
+            <circle cx="160" cy="110" r="75" fill="none" stroke="currentColor" class="text-border/30 stroke-1" stroke-dasharray="3 3" />
+            <circle cx="160" cy="110" r="40" fill="none" stroke="currentColor" class="text-border/20 stroke-1" stroke-dasharray="2 2" />
+
             <!-- Draw Link Lines -->
             {#each coOccurrenceLinks as link}
               {#if topKeywords[link.sourceIdx] && topKeywords[link.targetIdx]}
                 {@const total = topKeywords.length}
-                {@const r = 60}
-                {@const cx = 140}
-                {@const cy = 90}
-                {@const x1 = cx + r * Math.cos((2 * Math.PI * link.sourceIdx) / total)}
-                {@const y1 = cy + r * Math.sin((2 * Math.PI * link.sourceIdx) / total)}
-                {@const x2 = cx + r * Math.cos((2 * Math.PI * link.targetIdx) / total)}
-                {@const y2 = cy + r * Math.sin((2 * Math.PI * link.targetIdx) / total)}
+                {@const r = 75}
+                {@const cx = 160}
+                {@const cy = 110}
+                {@const x1 = cx + r * Math.cos((2 * Math.PI * link.sourceIdx) / total - Math.PI / 2)}
+                {@const y1 = cy + r * Math.sin((2 * Math.PI * link.sourceIdx) / total - Math.PI / 2)}
+                {@const x2 = cx + r * Math.cos((2 * Math.PI * link.targetIdx) / total - Math.PI / 2)}
+                {@const y2 = cy + r * Math.sin((2 * Math.PI * link.targetIdx) / total - Math.PI / 2)}
                 <line
                   x1={x1}
                   y1={y1}
                   x2={x2}
                   y2={y2}
                   stroke="currentColor"
-                  class="text-primary/40 stroke-1"
-                  stroke-width={Math.min(link.strength, 3)}
-                  stroke-dasharray={link.strength === 1 ? '2 2' : 'none'}
+                  class="text-primary hover:text-primary transition-colors"
+                  stroke-opacity={Math.min(0.2 + link.strength * 0.15, 0.8)}
+                  stroke-width={Math.min(1.5 + link.strength * 0.8, 4)}
                 />
               {/if}
             {/each}
 
-            <!-- Draw Interactive Nodes -->
+            <!-- Draw Interactive Nodes & High-contrast Labels -->
             {#each topKeywords as kw, idx}
               {@const total = topKeywords.length}
-              {@const r = 65}
-              {@const cx = 140}
-              {@const cy = 90}
-              {@const x = cx + r * Math.cos((2 * Math.PI * idx) / total)}
-              {@const y = cy + r * Math.sin((2 * Math.PI * idx) / total)}
+              {@const r = 75}
+              {@const cx = 160}
+              {@const cy = 110}
+              {@const x = cx + r * Math.cos((2 * Math.PI * idx) / total - Math.PI / 2)}
+              {@const y = cy + r * Math.sin((2 * Math.PI * idx) / total - Math.PI / 2)}
+              {@const labelText = kw.word.length > 7 ? kw.word.slice(0, 6) + '…' : kw.word}
               <!-- svelte-ignore a11y_click_events_have_key_events -->
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <g
                 transform="translate({x}, {y})"
                 class="cursor-pointer group"
                 onclick={() => onSelectKeyword?.(kw.word)}
+                filter="url(#node-shadow)"
               >
+                <!-- Node Outer Ring -->
                 <circle
-                  r={Math.min(12 + kw.count * 1.5, 22)}
-                  class="fill-surface stroke-primary/60 group-hover:stroke-primary group-hover:fill-primary/20 transition-all stroke-1"
+                  r={Math.min(14 + kw.count * 1.8, 24)}
+                  fill="url(#node-grad)"
+                  class="stroke-primary/70 group-hover:stroke-primary group-hover:fill-primary/30 transition-all stroke-2"
+                />
+                <!-- Node Center Dot -->
+                <circle
+                  r="3"
+                  class="fill-primary"
+                />
+
+                <!-- Text Label Pill Background for High Contrast -->
+                <rect
+                  x="-32"
+                  y="12"
+                  width="64"
+                  height="16"
+                  rx="8"
+                  class="fill-surface/90 stroke-border/60 group-hover:stroke-primary/80 group-hover:fill-surface transition-all stroke-1"
                 />
                 <text
+                  x="0"
+                  y="23"
                   text-anchor="middle"
-                  dy="3"
-                  class="fill-foreground font-semibold text-[9px] pointer-events-none select-none"
+                  class="fill-foreground font-bold text-[9px] pointer-events-none select-none group-hover:fill-primary transition-colors"
                 >
-                  {kw.word.length > 6 ? kw.word.slice(0, 5) + '…' : kw.word}
+                  {labelText}
                 </text>
               </g>
             {/each}
